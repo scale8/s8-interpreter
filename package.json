@@ -1,6 +1,6 @@
 {
     "name": "@scale8/s8-interpreter",
-    "version": "0.0.14",
+    "version": "0.1.1",
     "description": "Javascript Interpreter",
     "keywords": [
         "s8",
@@ -12,25 +12,34 @@
     "publishConfig": {
         "registry": "https://npm.pkg.github.com/"
     },
-    "scripts": {},
+    "scripts": {
+        "clean": "rimraf coverage dist tmp logs",
+        "lint": "eslint . --ext .ts",
+        "lint:fix": "yarn lint --fix",
+        "build": "webpack",
+        "prepare": "yarn build"
+    },
     "files": [
         "dist/**/*"
     ],
     "repository": "git@github.com:scale8/s8-interpreter.git",
     "author": "alessandro@scale8.com",
     "license": "UNLICENSED",
-    "devDependencies": {
+    "dependencies": {
         "@types/node": "^14.14.28",
-        "@typescript-eslint/eslint-plugin": "^4.15.1",
-        "@typescript-eslint/parser": "^4.15.1",
+        "babel-loader": "^8.2.2",
+        "copy-webpack-plugin": "^7.0.0",
         "eslint": "^7.20.0",
         "eslint-config-prettier": "^7.2.0",
         "eslint-plugin-jest": "^24.1.5",
         "eslint-plugin-prettier": "^3.3.1",
         "eslint-plugin-unused-imports": "^1.1.0",
+        "jest": "^26.6.3",
         "prettier": "^2.2.1",
         "rimraf": "^3.0.2",
         "ts-node": "^9.1.1",
-        "typescript": "^4.1.5"
+        "typescript": "^4.1.5",
+        "webpack": "^5.23.0",
+        "webpack-cli": "^4.5.0"
     }
 }
