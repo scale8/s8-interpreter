@@ -1,6 +1,6 @@
 {
     "name": "@scale8/s8-interpreter",
-    "version": "0.0.14",
+    "version": "0.1.1",
     "description": "Javascript Interpreter",
     "keywords": [
         "s8",
