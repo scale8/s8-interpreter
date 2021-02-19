@@ -1,7 +1,8 @@
+export as namespace S8Interpreter;
 export = S8Interpreter;
 
 declare namespace S8Interpreter {
-    export class S8Interpreter {
+    class S8Interpreter {
         /**
          * Create a new interpreter.
          * @param {string} code Raw JavaScript text.
