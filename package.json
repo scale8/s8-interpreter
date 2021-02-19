@@ -18,7 +18,6 @@
     "lint:fix": "yarn lint --fix",
     "build": "tsc",
     "prepare": "yarn build",
-    "serve_demo": "tsc demo/main.ts; browserify demo/main.js > demo/bundle.js; serve -s demo"
   },
   "files": [
     "dist/**/*"

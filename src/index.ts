@@ -1,3 +1,2 @@
-// @ts-ignore
-// export { S8Interpreter } from './js-interpreter/S8Interpreter';
-export * from './interpreter/Test';
+export { S8Interpreter } from './interpreter/S8Interpreter';
+export { S8Parser } from './interpreter/S8Parser';
