@@ -1,4 +1,6 @@
-declare module 'S8Interpreter' {
+export = S8Interpreter;
+
+declare namespace S8Interpreter {
     export class S8Interpreter {
         /**
          * Create a new interpreter.
@@ -17,5 +19,3 @@ declare module 'S8Interpreter' {
         run(): void;
     }
 }
-
-declare module 'S8Acorn';
