@@ -1,4 +1,3 @@
-export as namespace S8Interpreter;
 export = S8Interpreter;
 
 declare namespace S8Interpreter {
