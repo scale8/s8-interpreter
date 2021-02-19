@@ -10,7 +10,7 @@
  */
 'use strict';
 
-import { s8Acorn as acorn } from './S8Acorn';
+import { S8Acorn as acorn } from './S8Acorn';
 
 /**
  * Create a new interpreter.
