@@ -20,9 +20,9 @@ import { S8Acorn as acorn } from './S8Acorn';
  *     global scope object.
  * @constructor
  */
-const S8Interpreter = function(code, opt_initFunc) {
+const Mod = function(code, opt_initFunc) {
     if (typeof code === 'string') {
-        code = acorn.parse(code, S8Interpreter.PARSE_OPTIONS);
+        code = acorn.parse(code, Mod.PARSE_OPTIONS);
     }
     // Get a handle on Acorn's node_t object.
     this.nodeConstructor = code.constructor;
@@ -52,17 +52,17 @@ const S8Interpreter = function(code, opt_initFunc) {
     this.globalScope = this.createScope(this.ast, null);
     this.globalObject = this.globalScope.object;
     // Run the polyfills.
-    this.ast = acorn.parse(this.polyfills_.join('\n'), S8Interpreter.PARSE_OPTIONS);
+    this.ast = acorn.parse(this.polyfills_.join('\n'), Mod.PARSE_OPTIONS);
     this.polyfills_ = undefined;  // Allow polyfill strings to garbage collect.
-    S8Interpreter.stripLocations_(this.ast, undefined, undefined);
-    let state = new S8Interpreter.State(this.ast, this.globalScope);
+    Mod.stripLocations_(this.ast, undefined, undefined);
+    let state = new Mod.State(this.ast, this.globalScope);
     state.done = false;
     this.stateStack = [state];
     this.run();
     this.value = undefined;
     // Point at the main program.
     this.ast = ast;
-    state = new S8Interpreter.State(this.ast, this.globalScope);
+    state = new Mod.State(this.ast, this.globalScope);
     state.done = false;
     this.stateStack.length = 0;
     this.stateStack[0] = state;
@@ -75,7 +75,7 @@ const S8Interpreter = function(code, opt_initFunc) {
  * Completion Value Types.
  * @enum {number}
  */
-S8Interpreter.Completion = {
+Mod.Completion = {
     NORMAL: 0,
     BREAK: 1,
     CONTINUE: 2,
@@ -86,14 +86,14 @@ S8Interpreter.Completion = {
 /**
  * @const {!Object} Configuration used for all Acorn parsing.
  */
-S8Interpreter.PARSE_OPTIONS = {
+Mod.PARSE_OPTIONS = {
     ecmaVersion: 5,
 };
 
 /**
  * Property descriptor of readonly properties.
  */
-S8Interpreter.READONLY_DESCRIPTOR = {
+Mod.READONLY_DESCRIPTOR = {
     configurable: true,
     enumerable: true,
     writable: false,
@@ -102,7 +102,7 @@ S8Interpreter.READONLY_DESCRIPTOR = {
 /**
  * Property descriptor of non-enumerable properties.
  */
-S8Interpreter.NONENUMERABLE_DESCRIPTOR = {
+Mod.NONENUMERABLE_DESCRIPTOR = {
     configurable: true,
     enumerable: false,
     writable: true,
@@ -111,7 +111,7 @@ S8Interpreter.NONENUMERABLE_DESCRIPTOR = {
 /**
  * Property descriptor of readonly, non-enumerable properties.
  */
-S8Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR = {
+Mod.READONLY_NONENUMERABLE_DESCRIPTOR = {
     configurable: true,
     enumerable: false,
     writable: false,
@@ -120,7 +120,7 @@ S8Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR = {
 /**
  * Property descriptor of variables.
  */
-S8Interpreter.VARIABLE_DESCRIPTOR = {
+Mod.VARIABLE_DESCRIPTOR = {
     configurable: false,
     enumerable: true,
     writable: true,
@@ -131,43 +131,43 @@ S8Interpreter.VARIABLE_DESCRIPTOR = {
  * added it to the stack, and will be thrown within the user's program.
  * When STEP_ERROR is thrown in the JS-Interpreter, the error can be ignored.
  */
-S8Interpreter.STEP_ERROR = { 'STEP_ERROR': true };
+Mod.STEP_ERROR = { 'STEP_ERROR': true };
 
 /**
  * Unique symbol for indicating that a reference is a variable on the scope,
  * not an object property.
  */
-S8Interpreter.SCOPE_REFERENCE = { 'SCOPE_REFERENCE': true };
+Mod.SCOPE_REFERENCE = { 'SCOPE_REFERENCE': true };
 
 /**
  * Unique symbol for indicating, when used as the value of the value
  * parameter in calls to setProperty and friends, that the value
  * should be taken from the property descriptor instead.
  */
-S8Interpreter.VALUE_IN_DESCRIPTOR = { 'VALUE_IN_DESCRIPTOR': true };
+Mod.VALUE_IN_DESCRIPTOR = { 'VALUE_IN_DESCRIPTOR': true };
 
 /**
  * Unique symbol for indicating that a RegExp timeout has occurred in a VM.
  */
-S8Interpreter.REGEXP_TIMEOUT = { 'REGEXP_TIMEOUT': true };
+Mod.REGEXP_TIMEOUT = { 'REGEXP_TIMEOUT': true };
 
 /**
  * For cycle detection in array to string and error conversion;
  * see spec bug github.com/tc39/ecma262/issues/289
  * Since this is for atomic actions only, it can be a class property.
  */
-S8Interpreter.toStringCycles_ = [];
+Mod.toStringCycles_ = [];
 
 /**
  * Node's vm module, if loaded and required.
  * @type {Object}
  */
-S8Interpreter.vm = null;
+Mod.vm = null;
 
 /**
  * Code for executing regular expressions in a thread.
  */
-S8Interpreter.WORKER_CODE = [
+Mod.WORKER_CODE = [
     'onmessage = function(e) {',
     'var result;',
     'var data = e.data;',
@@ -202,11 +202,11 @@ S8Interpreter.WORKER_CODE = [
 
 /**
  * Is a value a legal integer for an array length?
- * @param {S8Interpreter.Value} x Value to check.
+ * @param {Mod.Value} x Value to check.
  * @return {number} Zero, or a positive integer if the value can be
  *     converted to such.  NaN otherwise.
  */
-S8Interpreter.legalArrayLength = function(x) {
+Mod.legalArrayLength = function(x) {
     const n = x >>> 0;
     // Array length must be between 0 and 2^32-1 (inclusive).
     return (n === Number(x)) ? n : NaN;
@@ -214,11 +214,11 @@ S8Interpreter.legalArrayLength = function(x) {
 
 /**
  * Is a value a legal integer for an array index?
- * @param {S8Interpreter.Value} x Value to check.
+ * @param {Mod.Value} x Value to check.
  * @return {number} Zero, or a positive integer if the value can be
  *     converted to such.  NaN otherwise.
  */
-S8Interpreter.legalArrayIndex = function(x) {
+Mod.legalArrayIndex = function(x) {
     const n = x >>> 0;
     // Array index cannot be 2^32-1, otherwise length would be 2^32.
     // 0xffffffff is 2^32-1.
@@ -234,7 +234,7 @@ S8Interpreter.legalArrayIndex = function(x) {
  * @param {number=} end Ending character of all nodes, or undefined.
  * @private
  */
-S8Interpreter.stripLocations_ = function(node, start, end) {
+Mod.stripLocations_ = function(node, start, end) {
     if (start) {
         node['start'] = start;
     } else {
@@ -249,7 +249,7 @@ S8Interpreter.stripLocations_ = function(node, start, end) {
         if (node.hasOwnProperty(name)) {
             const prop = node[name];
             if (prop && typeof prop === 'object') {
-                S8Interpreter.stripLocations_(prop, start, end);
+                Mod.stripLocations_(prop, start, end);
             }
         }
     }
@@ -262,37 +262,37 @@ S8Interpreter.stripLocations_ = function(node, start, end) {
  * 1 - execute natively (risk of unresponsive program).
  * 2 - execute in separate thread (not supported by IE 9).
  */
-S8Interpreter.prototype['REGEXP_MODE'] = 2;
+Mod.prototype['REGEXP_MODE'] = 2;
 
 /**
  * If REGEXP_MODE = 2, the length of time (in ms) to allow a RegExp
  * thread to execute before terminating it.
  */
-S8Interpreter.prototype['REGEXP_THREAD_TIMEOUT'] = 1000;
+Mod.prototype['REGEXP_THREAD_TIMEOUT'] = 1000;
 
 /**
  * Flag indicating that a getter function needs to be called immediately.
  * @private
  */
-S8Interpreter.prototype.getterStep_ = false;
+Mod.prototype.getterStep_ = false;
 
 /**
  * Flag indicating that a setter function needs to be called immediately.
  * @private
  */
-S8Interpreter.prototype.setterStep_ = false;
+Mod.prototype.setterStep_ = false;
 
 /**
  * Add more code to the interpreter.
  * @param {string|!Object} code Raw JavaScript text or AST.
  */
-S8Interpreter.prototype.appendCode = function(code) {
+Mod.prototype.appendCode = function(code) {
     const state = this.stateStack[0];
     if (!state || state.node['type'] !== 'Program') {
         throw Error('Expecting original AST to start with a Program node.');
     }
     if (typeof code === 'string') {
-        code = acorn.parse(code, S8Interpreter.PARSE_OPTIONS);
+        code = acorn.parse(code, Mod.PARSE_OPTIONS);
     }
     if (!code || code['type'] !== 'Program') {
         throw Error('Expecting new AST to start with a Program node.');
@@ -307,7 +307,7 @@ S8Interpreter.prototype.appendCode = function(code) {
  * Execute one step of the interpreter.
  * @return {boolean} True if a step was executed, false if no more instructions.
  */
-S8Interpreter.prototype.step = function() {
+Mod.prototype.step = function() {
     const stack = this.stateStack;
     do {
         const state = stack[stack.length - 1];
@@ -324,7 +324,7 @@ S8Interpreter.prototype.step = function() {
             var nextState = this.stepFunctions_[type](stack, state, node);
         } catch (e) {
             // Eat any step errors.  They have been thrown on the stack.
-            if (e !== S8Interpreter.STEP_ERROR) {
+            if (e !== Mod.STEP_ERROR) {
                 // Uh oh.  This is a real error in the JS-Interpreter.  Rethrow.
                 throw e;
             }
@@ -350,7 +350,7 @@ S8Interpreter.prototype.step = function() {
  * @return {boolean} True if a execution is asynchronously blocked,
  *     false if no more instructions.
  */
-S8Interpreter.prototype.run = function() {
+Mod.prototype.run = function() {
     while (!this.paused_ && this.step()) {
     }
     return this.paused_;
@@ -358,26 +358,26 @@ S8Interpreter.prototype.run = function() {
 
 /**
  * Initialize the global object with buitin properties and functions.
- * @param {!S8Interpreter.Object} globalObject Global object.
+ * @param {!Mod.Object} globalObject Global object.
  */
-S8Interpreter.prototype.initGlobal = function(globalObject) {
+Mod.prototype.initGlobal = function(globalObject) {
     // Initialize uneditable global properties.
     this.setProperty(globalObject, 'NaN', NaN,
-        S8Interpreter.READONLY_DESCRIPTOR);
+        Mod.READONLY_DESCRIPTOR);
     this.setProperty(globalObject, 'Infinity', Infinity,
-        S8Interpreter.READONLY_DESCRIPTOR);
+        Mod.READONLY_DESCRIPTOR);
     this.setProperty(globalObject, 'undefined', undefined,
-        S8Interpreter.READONLY_DESCRIPTOR);
+        Mod.READONLY_DESCRIPTOR);
     this.setProperty(globalObject, 'window', globalObject,
-        S8Interpreter.READONLY_DESCRIPTOR);
+        Mod.READONLY_DESCRIPTOR);
     this.setProperty(globalObject, 'this', globalObject,
-        S8Interpreter.READONLY_DESCRIPTOR);
+        Mod.READONLY_DESCRIPTOR);
     this.setProperty(globalObject, 'self', globalObject);  // Editable.
 
     // Create the objects which will become Object.prototype and
     // Function.prototype, which are needed to bootstrap everything else.
-    this.OBJECT_PROTO = new S8Interpreter.Object(null);
-    this.FUNCTION_PROTO = new S8Interpreter.Object(this.OBJECT_PROTO);
+    this.OBJECT_PROTO = new Mod.Object(null);
+    this.FUNCTION_PROTO = new Mod.Object(this.OBJECT_PROTO);
     // Initialize global objects.
     this.initFunction(globalObject);
     this.initObject(globalObject);
@@ -386,7 +386,7 @@ S8Interpreter.prototype.initGlobal = function(globalObject) {
     // be `Object`.  This interpreter is closer to Node in that it has no DOM.
     globalObject.proto = this.OBJECT_PROTO;
     this.setProperty(globalObject, 'constructor', this.OBJECT,
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
     this.initArray(globalObject);
     this.initString(globalObject);
     this.initBoolean(globalObject);
@@ -435,7 +435,7 @@ S8Interpreter.prototype.initGlobal = function(globalObject) {
         })(strFunctions[i][0]);
         this.setProperty(globalObject, strFunctions[i][1],
             this.createNativeFunction(wrapper, false),
-            S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+            Mod.NONENUMERABLE_DESCRIPTOR);
     }
     // Preserve publicly properties from being pruned/renamed by JS compilers.
     // Add others as needed.
@@ -458,9 +458,9 @@ S8Interpreter.prototype.initGlobal = function(globalObject) {
 
 /**
  * Initialize the Function class.
- * @param {!S8Interpreter.Object} globalObject Global object.
+ * @param {!Mod.Object} globalObject Global object.
  */
-S8Interpreter.prototype.initFunction = function(globalObject) {
+Mod.prototype.initFunction = function(globalObject) {
     const thisInterpreter = this;
     let wrapper;
     const identifierRegexp = /^[A-Za-z_$][\w$]*$/;
@@ -487,7 +487,7 @@ S8Interpreter.prototype.initFunction = function(globalObject) {
         // statements will be syntax errors.
         try {
             var ast = acorn.parse('(function(' + argsStr + ') {' + code + '})',
-                S8Interpreter.PARSE_OPTIONS);
+                Mod.PARSE_OPTIONS);
         } catch (e) {
             // Acorn threw a SyntaxError.  Rethrow as a trappable error.
             thisInterpreter.throwException(thisInterpreter.SYNTAX_ERROR,
@@ -510,20 +510,20 @@ S8Interpreter.prototype.initFunction = function(globalObject) {
     this.setProperty(globalObject, 'Function', this.FUNCTION);
     // Throw away the created prototype and use the root prototype.
     this.setProperty(this.FUNCTION, 'prototype', this.FUNCTION_PROTO,
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 
     // Configure Function.prototype.
     this.setProperty(this.FUNCTION_PROTO, 'constructor', this.FUNCTION,
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
     this.FUNCTION_PROTO.nativeFunc = function() {
     };
     this.FUNCTION_PROTO.nativeFunc.id = this.functionCounter_++;
     this.setProperty(this.FUNCTION_PROTO, 'length', 0,
-        S8Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+        Mod.READONLY_NONENUMERABLE_DESCRIPTOR);
 
     const boxThis = function(value) {
         // In non-strict mode `this` must be an object.
-        if (!(value instanceof S8Interpreter.Object) &&
+        if (!(value instanceof Mod.Object) &&
             !thisInterpreter.getScope().strict) {
             if (value === undefined || value === null) {
                 // `Undefined` and `null` are changed to the global object.
@@ -549,7 +549,7 @@ S8Interpreter.prototype.initFunction = function(globalObject) {
         // Bind any provided arguments.
         state.arguments_ = [];
         if (args !== null && args !== undefined) {
-            if (args instanceof S8Interpreter.Object) {
+            if (args instanceof Mod.Object) {
                 state.arguments_ = thisInterpreter.arrayPseudoToNative(args);
             } else {
                 thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
@@ -611,21 +611,21 @@ S8Interpreter.prototype.initFunction = function(globalObject) {
     this.setNativeFunctionPrototype(this.FUNCTION, 'toString', wrapper);
     this.setProperty(this.FUNCTION, 'toString',
         this.createNativeFunction(wrapper, false),
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
     wrapper = function() {
         return this.valueOf();
     };
     this.setNativeFunctionPrototype(this.FUNCTION, 'valueOf', wrapper);
     this.setProperty(this.FUNCTION, 'valueOf',
         this.createNativeFunction(wrapper, false),
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 };
 
 /**
  * Initialize the Object class.
- * @param {!S8Interpreter.Object} globalObject Global object.
+ * @param {!Mod.Object} globalObject Global object.
  */
-S8Interpreter.prototype.initObject = function(globalObject) {
+Mod.prototype.initObject = function(globalObject) {
     const thisInterpreter = this;
     let wrapper;
     // Object constructor.
@@ -640,7 +640,7 @@ S8Interpreter.prototype.initObject = function(globalObject) {
                 return thisInterpreter.createObjectProto(thisInterpreter.OBJECT_PROTO);
             }
         }
-        if (!(value instanceof S8Interpreter.Object)) {
+        if (!(value instanceof Mod.Object)) {
             // Wrap the value as an object.
             const box = thisInterpreter.createObjectProto(
                 thisInterpreter.getPrototype(value));
@@ -653,15 +653,15 @@ S8Interpreter.prototype.initObject = function(globalObject) {
     this.OBJECT = this.createNativeFunction(wrapper, true);
     // Throw away the created prototype and use the root prototype.
     this.setProperty(this.OBJECT, 'prototype', this.OBJECT_PROTO,
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
     this.setProperty(this.OBJECT_PROTO, 'constructor', this.OBJECT,
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
     this.setProperty(globalObject, 'Object', this.OBJECT);
 
     /**
      * Checks if the provided value is null or undefined.
      * If so, then throw an error in the call stack.
-     * @param {S8Interpreter.Value} value Value to check.
+     * @param {Mod.Value} value Value to check.
      */
     const throwIfNullUndefined = function(value) {
         if (value === undefined || value === null) {
@@ -673,31 +673,31 @@ S8Interpreter.prototype.initObject = function(globalObject) {
     // Static methods on Object.
     wrapper = function(obj) {
         throwIfNullUndefined(obj);
-        const props = (obj instanceof S8Interpreter.Object) ? obj.properties : obj;
+        const props = (obj instanceof Mod.Object) ? obj.properties : obj;
         return thisInterpreter.arrayNativeToPseudo(
             Object.getOwnPropertyNames(props));
     };
     this.setProperty(this.OBJECT, 'getOwnPropertyNames',
         this.createNativeFunction(wrapper, false),
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 
     wrapper = function(obj) {
         throwIfNullUndefined(obj);
-        if (obj instanceof S8Interpreter.Object) {
+        if (obj instanceof Mod.Object) {
             obj = obj.properties;
         }
         return thisInterpreter.arrayNativeToPseudo(Object.keys(obj));
     };
     this.setProperty(this.OBJECT, 'keys',
         this.createNativeFunction(wrapper, false),
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 
     wrapper = function(proto) {
         // Support for the second argument is the responsibility of a polyfill.
         if (proto === null) {
             return thisInterpreter.createObjectProto(null);
         }
-        if (!(proto instanceof S8Interpreter.Object)) {
+        if (!(proto instanceof Mod.Object)) {
             thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
                 'Object prototype may only be an Object or null');
         }
@@ -705,7 +705,7 @@ S8Interpreter.prototype.initObject = function(globalObject) {
     };
     this.setProperty(this.OBJECT, 'create',
         this.createNativeFunction(wrapper, false),
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 
     // Add a polyfill to handle create's second argument.
     this.polyfills_.push(
@@ -721,11 +721,11 @@ S8Interpreter.prototype.initObject = function(globalObject) {
 
     wrapper = function(obj, prop, descriptor) {
         prop = String(prop);
-        if (!(obj instanceof S8Interpreter.Object)) {
+        if (!(obj instanceof Mod.Object)) {
             thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
                 'Object.defineProperty called on non-object');
         }
-        if (!(descriptor instanceof S8Interpreter.Object)) {
+        if (!(descriptor instanceof Mod.Object)) {
             thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
                 'Property description must be an object');
         }
@@ -735,13 +735,13 @@ S8Interpreter.prototype.initObject = function(globalObject) {
         }
         // The polyfill guarantees no inheritance and no getter functions.
         // Therefore the descriptor properties map is the native object needed.
-        thisInterpreter.setProperty(obj, prop, S8Interpreter.VALUE_IN_DESCRIPTOR,
+        thisInterpreter.setProperty(obj, prop, Mod.VALUE_IN_DESCRIPTOR,
             descriptor.properties);
         return obj;
     };
     this.setProperty(this.OBJECT, 'defineProperty',
         this.createNativeFunction(wrapper, false),
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 
     this.polyfills_.push(
 // Flatten the descriptor to remove any inheritance or getter functions.
@@ -772,7 +772,7 @@ S8Interpreter.prototype.initObject = function(globalObject) {
         '');
 
     wrapper = function(obj, prop) {
-        if (!(obj instanceof S8Interpreter.Object)) {
+        if (!(obj instanceof Mod.Object)) {
             thisInterpreter.throwException(thisInterpreter.TYPE_ERROR,
                 'Object.getOwnPropertyDescriptor called on non-object');
         }
@@ -803,7 +803,7 @@ S8Interpreter.prototype.initObject = function(globalObject) {
     };
     this.setProperty(this.OBJECT, 'getOwnPropertyDescriptor',
         this.createNativeFunction(wrapper, false),
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 
     wrapper = function(obj) {
         throwIfNullUndefined(obj);
@@ -811,36 +811,36 @@ S8Interpreter.prototype.initObject = function(globalObject) {
     };
     this.setProperty(this.OBJECT, 'getPrototypeOf',
         this.createNativeFunction(wrapper, false),
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 
     wrapper = function(obj) {
         return Boolean(obj) && !obj.preventExtensions;
     };
     this.setProperty(this.OBJECT, 'isExtensible',
         this.createNativeFunction(wrapper, false),
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 
     wrapper = function(obj) {
-        if (obj instanceof S8Interpreter.Object) {
+        if (obj instanceof Mod.Object) {
             obj.preventExtensions = true;
         }
         return obj;
     };
     this.setProperty(this.OBJECT, 'preventExtensions',
         this.createNativeFunction(wrapper, false),
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 
     // Instance methods on Object.
     this.setNativeFunctionPrototype(this.OBJECT, 'toString',
-        S8Interpreter.Object.prototype.toString);
+        Mod.Object.prototype.toString);
     this.setNativeFunctionPrototype(this.OBJECT, 'toLocaleString',
-        S8Interpreter.Object.prototype.toString);
+        Mod.Object.prototype.toString);
     this.setNativeFunctionPrototype(this.OBJECT, 'valueOf',
-        S8Interpreter.Object.prototype.valueOf);
+        Mod.Object.prototype.valueOf);
 
     wrapper = function(prop) {
         throwIfNullUndefined(this);
-        if (this instanceof S8Interpreter.Object) {
+        if (this instanceof Mod.Object) {
             return String(prop) in this.properties;
         }
         // Primitive.
@@ -850,7 +850,7 @@ S8Interpreter.prototype.initObject = function(globalObject) {
 
     wrapper = function(prop) {
         throwIfNullUndefined(this);
-        if (this instanceof S8Interpreter.Object) {
+        if (this instanceof Mod.Object) {
             return Object.prototype.propertyIsEnumerable.call(this.properties, prop);
         }
         // Primitive.
@@ -876,9 +876,9 @@ S8Interpreter.prototype.initObject = function(globalObject) {
 
 /**
  * Initialize the Array class.
- * @param {!S8Interpreter.Object} globalObject Global object.
+ * @param {!Mod.Object} globalObject Global object.
  */
-S8Interpreter.prototype.initArray = function(globalObject) {
+Mod.prototype.initArray = function(globalObject) {
     const thisInterpreter = this;
     let wrapper;
     // Array constructor.
@@ -892,7 +892,7 @@ S8Interpreter.prototype.initArray = function(globalObject) {
         }
         const first = arguments[0];
         if (arguments.length === 1 && typeof first === 'number') {
-            if (isNaN(S8Interpreter.legalArrayLength(first))) {
+            if (isNaN(Mod.legalArrayLength(first))) {
                 thisInterpreter.throwException(thisInterpreter.RANGE_ERROR,
                     'Invalid array length');
             }
@@ -915,7 +915,7 @@ S8Interpreter.prototype.initArray = function(globalObject) {
     };
     this.setProperty(this.ARRAY, 'isArray',
         this.createNativeFunction(wrapper, false),
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 
     // Instance methods on Array.
     this.setProperty(this.ARRAY_PROTO, 'length', 0,
@@ -1194,9 +1194,9 @@ S8Interpreter.prototype.initArray = function(globalObject) {
 
 /**
  * Initialize the String class.
- * @param {!S8Interpreter.Object} globalObject Global object.
+ * @param {!Mod.Object} globalObject Global object.
  */
-S8Interpreter.prototype.initString = function(globalObject) {
+Mod.prototype.initString = function(globalObject) {
     const thisInterpreter = this;
     let wrapper;
     // String constructor.
@@ -1217,7 +1217,7 @@ S8Interpreter.prototype.initString = function(globalObject) {
     // Static methods on String.
     this.setProperty(this.STRING, 'fromCharCode',
         this.createNativeFunction(String.fromCharCode, false),
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 
     // Instance methods on String.
     // Methods with exclusively primitive arguments.
@@ -1245,7 +1245,7 @@ S8Interpreter.prototype.initString = function(globalObject) {
             separator = separator.data;
             thisInterpreter.maybeThrowRegExp(separator, callback);
             if (thisInterpreter['REGEXP_MODE'] === 2) {
-                if (S8Interpreter.vm) {
+                if (Mod.vm) {
                     // Run split in vm.
                     const sandbox = {
                         'string': string,
@@ -1255,7 +1255,7 @@ S8Interpreter.prototype.initString = function(globalObject) {
                     const code = 'string.split(separator, limit)';
                     var jsList =
                         thisInterpreter.vmCall(code, sandbox, separator, callback);
-                    if (jsList !== S8Interpreter.REGEXP_TIMEOUT) {
+                    if (jsList !== Mod.REGEXP_TIMEOUT) {
                         callback(thisInterpreter.arrayNativeToPseudo(jsList));
                     }
                 } else {
@@ -1289,7 +1289,7 @@ S8Interpreter.prototype.initString = function(globalObject) {
         // 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaac'.match(/^(a+)+b/)
         thisInterpreter.maybeThrowRegExp(regexp, callback);
         if (thisInterpreter['REGEXP_MODE'] === 2) {
-            if (S8Interpreter.vm) {
+            if (Mod.vm) {
                 // Run match in vm.
                 const sandbox = {
                     'string': string,
@@ -1297,7 +1297,7 @@ S8Interpreter.prototype.initString = function(globalObject) {
                 };
                 const code = 'string.match(regexp)';
                 var m = thisInterpreter.vmCall(code, sandbox, regexp, callback);
-                if (m !== S8Interpreter.REGEXP_TIMEOUT) {
+                if (m !== Mod.REGEXP_TIMEOUT) {
                     callback(m && thisInterpreter.arrayNativeToPseudo(m));
                 }
             } else {
@@ -1329,7 +1329,7 @@ S8Interpreter.prototype.initString = function(globalObject) {
         // 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaac'.search(/^(a+)+b/)
         thisInterpreter.maybeThrowRegExp(regexp, callback);
         if (thisInterpreter['REGEXP_MODE'] === 2) {
-            if (S8Interpreter.vm) {
+            if (Mod.vm) {
                 // Run search in vm.
                 const sandbox = {
                     'string': string,
@@ -1337,7 +1337,7 @@ S8Interpreter.prototype.initString = function(globalObject) {
                 };
                 const code = 'string.search(regexp)';
                 const n = thisInterpreter.vmCall(code, sandbox, regexp, callback);
-                if (n !== S8Interpreter.REGEXP_TIMEOUT) {
+                if (n !== Mod.REGEXP_TIMEOUT) {
                     callback(n);
                 }
             } else {
@@ -1367,7 +1367,7 @@ S8Interpreter.prototype.initString = function(globalObject) {
             substr = substr.data;
             thisInterpreter.maybeThrowRegExp(substr, callback);
             if (thisInterpreter['REGEXP_MODE'] === 2) {
-                if (S8Interpreter.vm) {
+                if (Mod.vm) {
                     // Run replace in vm.
                     const sandbox = {
                         'string': string,
@@ -1376,7 +1376,7 @@ S8Interpreter.prototype.initString = function(globalObject) {
                     };
                     const code = 'string.replace(substr, newSubstr)';
                     const str = thisInterpreter.vmCall(code, sandbox, substr, callback);
-                    if (str !== S8Interpreter.REGEXP_TIMEOUT) {
+                    if (str !== Mod.REGEXP_TIMEOUT) {
                         callback(str);
                     }
                 } else {
@@ -1436,9 +1436,9 @@ S8Interpreter.prototype.initString = function(globalObject) {
 
 /**
  * Initialize the Boolean class.
- * @param {!S8Interpreter.Object} globalObject Global object.
+ * @param {!Mod.Object} globalObject Global object.
  */
-S8Interpreter.prototype.initBoolean = function(globalObject) {
+Mod.prototype.initBoolean = function(globalObject) {
     const thisInterpreter = this;
     let wrapper;
     // Boolean constructor.
@@ -1459,9 +1459,9 @@ S8Interpreter.prototype.initBoolean = function(globalObject) {
 
 /**
  * Initialize the Number class.
- * @param {!S8Interpreter.Object} globalObject Global object.
+ * @param {!Mod.Object} globalObject Global object.
  */
-S8Interpreter.prototype.initNumber = function(globalObject) {
+Mod.prototype.initNumber = function(globalObject) {
     const thisInterpreter = this;
     let wrapper;
     // Number constructor.
@@ -1483,7 +1483,7 @@ S8Interpreter.prototype.initNumber = function(globalObject) {
         'POSITIVE_INFINITY'];
     for (let i = 0; i < numConsts.length; i++) {
         this.setProperty(this.NUMBER, numConsts[i], Number[numConsts[i]],
-            S8Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+            Mod.READONLY_NONENUMERABLE_DESCRIPTOR);
     }
 
     // Instance methods on Number.
@@ -1537,9 +1537,9 @@ S8Interpreter.prototype.initNumber = function(globalObject) {
 
 /**
  * Initialize the Date class.
- * @param {!S8Interpreter.Object} globalObject Global object.
+ * @param {!Mod.Object} globalObject Global object.
  */
-S8Interpreter.prototype.initDate = function(globalObject) {
+Mod.prototype.initDate = function(globalObject) {
     const thisInterpreter = this;
     let wrapper;
     // Date constructor.
@@ -1560,14 +1560,14 @@ S8Interpreter.prototype.initDate = function(globalObject) {
 
     // Static methods on Date.
     this.setProperty(this.DATE, 'now', this.createNativeFunction(Date.now, false),
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 
     this.setProperty(this.DATE, 'parse',
         this.createNativeFunction(Date.parse, false),
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 
     this.setProperty(this.DATE, 'UTC', this.createNativeFunction(Date.UTC, false),
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 
     // Instance methods on Date.
     const functions = ['getDate', 'getDay', 'getFullYear', 'getHours',
@@ -1598,9 +1598,9 @@ S8Interpreter.prototype.initDate = function(globalObject) {
 
 /**
  * Initialize Regular Expression object.
- * @param {!S8Interpreter.Object} globalObject Global object.
+ * @param {!Mod.Object} globalObject Global object.
  */
-S8Interpreter.prototype.initRegExp = function(globalObject) {
+Mod.prototype.initRegExp = function(globalObject) {
     const thisInterpreter = this;
     let wrapper;
     // RegExp constructor.
@@ -1622,13 +1622,13 @@ S8Interpreter.prototype.initRegExp = function(globalObject) {
     this.setProperty(globalObject, 'RegExp', this.REGEXP);
 
     this.setProperty(this.REGEXP.properties['prototype'], 'global', undefined,
-        S8Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+        Mod.READONLY_NONENUMERABLE_DESCRIPTOR);
     this.setProperty(this.REGEXP.properties['prototype'], 'ignoreCase', undefined,
-        S8Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+        Mod.READONLY_NONENUMERABLE_DESCRIPTOR);
     this.setProperty(this.REGEXP.properties['prototype'], 'multiline', undefined,
-        S8Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+        Mod.READONLY_NONENUMERABLE_DESCRIPTOR);
     this.setProperty(this.REGEXP.properties['prototype'], 'source', '(?:)',
-        S8Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+        Mod.READONLY_NONENUMERABLE_DESCRIPTOR);
 
     // Use polyfill to avoid complexity of regexp threads.
     this.polyfills_.push(
@@ -1648,7 +1648,7 @@ S8Interpreter.prototype.initRegExp = function(globalObject) {
         // /^(a+)+b/.exec('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaac')
         thisInterpreter.maybeThrowRegExp(regexp, callback);
         if (thisInterpreter['REGEXP_MODE'] === 2) {
-            if (S8Interpreter.vm) {
+            if (Mod.vm) {
                 // Run exec in vm.
                 const sandbox = {
                     'string': string,
@@ -1656,7 +1656,7 @@ S8Interpreter.prototype.initRegExp = function(globalObject) {
                 };
                 const code = 'regexp.exec(string)';
                 var match = thisInterpreter.vmCall(code, sandbox, regexp, callback);
-                if (match !== S8Interpreter.REGEXP_TIMEOUT) {
+                if (match !== Mod.REGEXP_TIMEOUT) {
                     thisInterpreter.setProperty(this, 'lastIndex', regexp.lastIndex);
                     callback(matchToPseudo(match));
                 }
@@ -1698,9 +1698,9 @@ S8Interpreter.prototype.initRegExp = function(globalObject) {
 
 /**
  * Initialize the Error class.
- * @param {!S8Interpreter.Object} globalObject Global object.
+ * @param {!Mod.Object} globalObject Global object.
  */
-S8Interpreter.prototype.initError = function(globalObject) {
+Mod.prototype.initError = function(globalObject) {
     const thisInterpreter = this;
     // Error constructor.
     this.ERROR = this.createNativeFunction(function(opt_message) {
@@ -1713,15 +1713,15 @@ S8Interpreter.prototype.initError = function(globalObject) {
         }
         if (opt_message) {
             thisInterpreter.setProperty(newError, 'message', String(opt_message),
-                S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+                Mod.NONENUMERABLE_DESCRIPTOR);
         }
         return newError;
     }, true);
     this.setProperty(globalObject, 'Error', this.ERROR);
     this.setProperty(this.ERROR.properties['prototype'], 'message', '',
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
     this.setProperty(this.ERROR.properties['prototype'], 'name', 'Error',
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
 
     const createErrorSubclass = function(name) {
         const constructor = thisInterpreter.createNativeFunction(
@@ -1735,15 +1735,15 @@ S8Interpreter.prototype.initError = function(globalObject) {
                 }
                 if (opt_message) {
                     thisInterpreter.setProperty(newError, 'message',
-                        String(opt_message), S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+                        String(opt_message), Mod.NONENUMERABLE_DESCRIPTOR);
                 }
                 return newError;
             }, true);
         thisInterpreter.setProperty(constructor, 'prototype',
             thisInterpreter.createObject(thisInterpreter.ERROR),
-            S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+            Mod.NONENUMERABLE_DESCRIPTOR);
         thisInterpreter.setProperty(constructor.properties['prototype'], 'name',
-            name, S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+            name, Mod.NONENUMERABLE_DESCRIPTOR);
         thisInterpreter.setProperty(globalObject, name, constructor);
 
         return constructor;
@@ -1759,16 +1759,16 @@ S8Interpreter.prototype.initError = function(globalObject) {
 
 /**
  * Initialize Math object.
- * @param {!S8Interpreter.Object} globalObject Global object.
+ * @param {!Mod.Object} globalObject Global object.
  */
-S8Interpreter.prototype.initMath = function(globalObject) {
+Mod.prototype.initMath = function(globalObject) {
     const myMath = this.createObjectProto(this.OBJECT_PROTO);
     this.setProperty(globalObject, 'Math', myMath);
     const mathConsts = ['E', 'LN2', 'LN10', 'LOG2E', 'LOG10E', 'PI',
         'SQRT1_2', 'SQRT2'];
     for (var i = 0; i < mathConsts.length; i++) {
         this.setProperty(myMath, mathConsts[i], Math[mathConsts[i]],
-            S8Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+            Mod.READONLY_NONENUMERABLE_DESCRIPTOR);
     }
     const numFunctions = ['abs', 'acos', 'asin', 'atan', 'atan2', 'ceil', 'cos',
         'exp', 'floor', 'log', 'max', 'min', 'pow', 'random',
@@ -1776,15 +1776,15 @@ S8Interpreter.prototype.initMath = function(globalObject) {
     for (var i = 0; i < numFunctions.length; i++) {
         this.setProperty(myMath, numFunctions[i],
             this.createNativeFunction(Math[numFunctions[i]], false),
-            S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+            Mod.NONENUMERABLE_DESCRIPTOR);
     }
 };
 
 /**
  * Initialize JSON object.
- * @param {!S8Interpreter.Object} globalObject Global object.
+ * @param {!Mod.Object} globalObject Global object.
  */
-S8Interpreter.prototype.initJSON = function(globalObject) {
+Mod.prototype.initJSON = function(globalObject) {
     const thisInterpreter = this;
     const myJSON = thisInterpreter.createObjectProto(this.OBJECT_PROTO);
     this.setProperty(globalObject, 'JSON', myJSON);
@@ -1831,12 +1831,12 @@ S8Interpreter.prototype.initJSON = function(globalObject) {
 
 /**
  * Is an object of a certain class?
- * @param {S8Interpreter.Value} child Object to check.
- * @param {S8Interpreter.Object} constructor Constructor of object.
+ * @param {Mod.Value} child Object to check.
+ * @param {Mod.Object} constructor Constructor of object.
  * @return {boolean} True if object is the class or inherits from it.
  *     False otherwise.
  */
-S8Interpreter.prototype.isa = function(child, constructor) {
+Mod.prototype.isa = function(child, constructor) {
     if (child === null || child === undefined || !constructor) {
         return false;
     }
@@ -1859,22 +1859,22 @@ S8Interpreter.prototype.isa = function(child, constructor) {
 /**
  * Initialize a pseudo regular expression object based on a native regular
  * expression object.
- * @param {!S8Interpreter.Object} pseudoRegexp The existing object to set.
+ * @param {!Mod.Object} pseudoRegexp The existing object to set.
  * @param {!RegExp} nativeRegexp The native regular expression.
  */
-S8Interpreter.prototype.populateRegExp = function(pseudoRegexp, nativeRegexp) {
+Mod.prototype.populateRegExp = function(pseudoRegexp, nativeRegexp) {
     pseudoRegexp.data = new RegExp(nativeRegexp.source, nativeRegexp.flags);
     // lastIndex is settable, all others are read-only attributes
     this.setProperty(pseudoRegexp, 'lastIndex', nativeRegexp.lastIndex,
-        S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+        Mod.NONENUMERABLE_DESCRIPTOR);
     this.setProperty(pseudoRegexp, 'source', nativeRegexp.source,
-        S8Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+        Mod.READONLY_NONENUMERABLE_DESCRIPTOR);
     this.setProperty(pseudoRegexp, 'global', nativeRegexp.global,
-        S8Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+        Mod.READONLY_NONENUMERABLE_DESCRIPTOR);
     this.setProperty(pseudoRegexp, 'ignoreCase', nativeRegexp.ignoreCase,
-        S8Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+        Mod.READONLY_NONENUMERABLE_DESCRIPTOR);
     this.setProperty(pseudoRegexp, 'multiline', nativeRegexp.multiline,
-        S8Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+        Mod.READONLY_NONENUMERABLE_DESCRIPTOR);
 };
 
 /**
@@ -1884,10 +1884,10 @@ S8Interpreter.prototype.populateRegExp = function(pseudoRegexp, nativeRegexp) {
  * Using a blob works in IE11 and all other browsers.
  * @return {!Worker} Web Worker with regexp execution code loaded.
  */
-S8Interpreter.prototype.createWorker = function() {
+Mod.prototype.createWorker = function() {
     let blob = this.createWorker.blob_;
     if (!blob) {
-        blob = new Blob([S8Interpreter.WORKER_CODE.join('\n')],
+        blob = new Blob([Mod.WORKER_CODE.join('\n')],
             { type: 'application/javascript' });
         // Cache the blob, so it doesn't need to be created next time.
         this.createWorker.blob_ = blob;
@@ -1902,15 +1902,15 @@ S8Interpreter.prototype.createWorker = function() {
  * @param {!RegExp} nativeRegExp Regular expression.
  * @param {!Function} callback Asynchronous callback function.
  */
-S8Interpreter.prototype.vmCall = function(code, sandbox, nativeRegExp, callback) {
+Mod.prototype.vmCall = function(code, sandbox, nativeRegExp, callback) {
     const options = { 'timeout': this['REGEXP_THREAD_TIMEOUT'] };
     try {
-        return S8Interpreter.vm['runInNewContext'](code, sandbox, options);
+        return Mod.vm['runInNewContext'](code, sandbox, options);
     } catch (e) {
         callback(null);
         this.throwException(this.ERROR, 'RegExp Timeout: ' + nativeRegExp);
     }
-    return S8Interpreter.REGEXP_TIMEOUT;
+    return Mod.REGEXP_TIMEOUT;
 };
 
 /**
@@ -1919,7 +1919,7 @@ S8Interpreter.prototype.vmCall = function(code, sandbox, nativeRegExp, callback)
  * @param {!RegExp} nativeRegExp Regular expression.
  * @param {!Function} callback Asynchronous callback function.
  */
-S8Interpreter.prototype.maybeThrowRegExp = function(nativeRegExp, callback) {
+Mod.prototype.maybeThrowRegExp = function(nativeRegExp, callback) {
     let ok;
     if (this['REGEXP_MODE'] === 0) {
         // Fail: No RegExp support.
@@ -1929,7 +1929,7 @@ S8Interpreter.prototype.maybeThrowRegExp = function(nativeRegExp, callback) {
         ok = true;
     } else {
         // Sandboxed RegExp handling.
-        if (S8Interpreter.vm) {
+        if (Mod.vm) {
             // Ok: Node's vm module already loaded.
             ok = true;
         } else if (typeof Worker === 'function' && typeof URL === 'function') {
@@ -1938,10 +1938,10 @@ S8Interpreter.prototype.maybeThrowRegExp = function(nativeRegExp, callback) {
         } else if (typeof require === 'function') {
             // Try to load Node's vm module.
             try {
-                S8Interpreter.vm = require('vm');
+                Mod.vm = require('vm');
             } catch (e) {
             }
-            ok = !!S8Interpreter.vm;
+            ok = !!Mod.vm;
         } else {
             // Fail: Neither Web Workers nor vm available.
             ok = false;
@@ -1962,7 +1962,7 @@ S8Interpreter.prototype.maybeThrowRegExp = function(nativeRegExp, callback) {
  * @param {!Function} callback Async callback function to continue execution.
  * @return {number} PID of timeout.  Used to cancel if thread completes.
  */
-S8Interpreter.prototype.regExpTimeout = function(nativeRegExp, worker, callback) {
+Mod.prototype.regExpTimeout = function(nativeRegExp, worker, callback) {
     const thisInterpreter = this;
     return setTimeout(function() {
         worker.terminate();
@@ -1978,25 +1978,25 @@ S8Interpreter.prototype.regExpTimeout = function(nativeRegExp, worker, callback)
 
 /**
  * Create a new data object based on a constructor's prototype.
- * @param {S8Interpreter.Object} constructor Parent constructor function,
+ * @param {Mod.Object} constructor Parent constructor function,
  *     or null if scope object.
- * @return {!S8Interpreter.Object} New data object.
+ * @return {!Mod.Object} New data object.
  */
-S8Interpreter.prototype.createObject = function(constructor) {
+Mod.prototype.createObject = function(constructor) {
     return this.createObjectProto(constructor &&
         constructor.properties['prototype']);
 };
 
 /**
  * Create a new data object based on a prototype.
- * @param {S8Interpreter.Object} proto Prototype object.
- * @return {!S8Interpreter.Object} New data object.
+ * @param {Mod.Object} proto Prototype object.
+ * @return {!Mod.Object} New data object.
  */
-S8Interpreter.prototype.createObjectProto = function(proto) {
+Mod.prototype.createObjectProto = function(proto) {
     if (typeof proto !== 'object') {
         throw Error('Non object prototype');
     }
-    const obj = new S8Interpreter.Object(proto);
+    const obj = new Mod.Object(proto);
     if (this.isa(obj, this.ERROR)) {
         // Record this object as being an error so that its toString function can
         // process it correctly (toString has no access to the interpreter and could
@@ -2008,9 +2008,9 @@ S8Interpreter.prototype.createObjectProto = function(proto) {
 
 /**
  * Create a new array.
- * @return {!S8Interpreter.Object} New array.
+ * @return {!Mod.Object} New array.
  */
-S8Interpreter.prototype.createArray = function() {
+Mod.prototype.createArray = function() {
     const array = this.createObjectProto(this.ARRAY_PROTO);
     // Arrays have length.
     this.setProperty(array, 'length', 0,
@@ -2023,23 +2023,23 @@ S8Interpreter.prototype.createArray = function() {
  * Create a new function object (could become interpreted or native or async).
  * @param {number} argumentLength Number of arguments.
  * @param {boolean} isConstructor True if function can be used with 'new'.
- * @return {!S8Interpreter.Object} New function.
+ * @return {!Mod.Object} New function.
  * @private
  */
-S8Interpreter.prototype.createFunctionBase_ = function(argumentLength,
-                                                       isConstructor) {
+Mod.prototype.createFunctionBase_ = function(argumentLength,
+                                             isConstructor) {
     const func = this.createObjectProto(this.FUNCTION_PROTO);
     if (isConstructor) {
         const proto = this.createObjectProto(this.OBJECT_PROTO);
         this.setProperty(func, 'prototype', proto,
-            S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+            Mod.NONENUMERABLE_DESCRIPTOR);
         this.setProperty(proto, 'constructor', func,
-            S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+            Mod.NONENUMERABLE_DESCRIPTOR);
     } else {
         func.illegalConstructor = true;
     }
     this.setProperty(func, 'length', argumentLength,
-        S8Interpreter.READONLY_NONENUMERABLE_DESCRIPTOR);
+        Mod.READONLY_NONENUMERABLE_DESCRIPTOR);
     func.class = 'Function';
     return func;
 };
@@ -2047,10 +2047,10 @@ S8Interpreter.prototype.createFunctionBase_ = function(argumentLength,
 /**
  * Create a new interpreted function.
  * @param {!Object} node AST node defining the function.
- * @param {!S8Interpreter.Scope} scope Parent scope.
- * @return {!S8Interpreter.Object} New function.
+ * @param {!Mod.Scope} scope Parent scope.
+ * @return {!Mod.Object} New function.
  */
-S8Interpreter.prototype.createFunction = function(node, scope) {
+Mod.prototype.createFunction = function(node, scope) {
     const func = this.createFunctionBase_(node['params'].length, true);
     func.parentScope = scope;
     func.node = node;
@@ -2061,10 +2061,10 @@ S8Interpreter.prototype.createFunction = function(node, scope) {
  * Create a new native function.
  * @param {!Function} nativeFunc JavaScript function.
  * @param {boolean} isConstructor True if function can be used with 'new'.
- * @return {!S8Interpreter.Object} New function.
+ * @return {!Mod.Object} New function.
  */
-S8Interpreter.prototype.createNativeFunction = function(nativeFunc,
-                                                        isConstructor) {
+Mod.prototype.createNativeFunction = function(nativeFunc,
+                                              isConstructor) {
     const func = this.createFunctionBase_(nativeFunc.length, isConstructor);
     func.nativeFunc = nativeFunc;
     nativeFunc.id = this.functionCounter_++;
@@ -2074,9 +2074,9 @@ S8Interpreter.prototype.createNativeFunction = function(nativeFunc,
 /**
  * Create a new native asynchronous function.
  * @param {!Function} asyncFunc JavaScript function.
- * @return {!S8Interpreter.Object} New function.
+ * @return {!Mod.Object} New function.
  */
-S8Interpreter.prototype.createAsyncFunction = function(asyncFunc) {
+Mod.prototype.createAsyncFunction = function(asyncFunc) {
     const func = this.createFunctionBase_(asyncFunc.length, true);
     func.asyncFunc = asyncFunc;
     asyncFunc.id = this.functionCounter_++;
@@ -2088,10 +2088,10 @@ S8Interpreter.prototype.createAsyncFunction = function(asyncFunc) {
  * Can handle JSON-style values, regular expressions, dates and functions.
  * Does NOT handle cycles.
  * @param {*} nativeObj The native JavaScript object to be converted.
- * @return {S8Interpreter.Value} The equivalent JS-Interpreter object.
+ * @return {Mod.Value} The equivalent JS-Interpreter object.
  */
-S8Interpreter.prototype.nativeToPseudo = function(nativeObj) {
-    if (nativeObj instanceof S8Interpreter.Object) {
+Mod.prototype.nativeToPseudo = function(nativeObj) {
+    if (nativeObj instanceof Mod.Object) {
         throw Error('Object is already pseudo');
     }
     if ((typeof nativeObj !== 'object' && typeof nativeObj !== 'function') ||
@@ -2146,17 +2146,17 @@ S8Interpreter.prototype.nativeToPseudo = function(nativeObj) {
  * Converts from a JS-Interpreter object to native JavaScript object.
  * Can handle JSON-style values, regular expressions, and dates.
  * Does handle cycles.
- * @param {S8Interpreter.Value} pseudoObj The JS-Interpreter object to be
+ * @param {Mod.Value} pseudoObj The JS-Interpreter object to be
  * converted.
  * @param {Object=} opt_cycles Cycle detection (used in recursive calls).
  * @return {*} The equivalent native JavaScript object or value.
  */
-S8Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
+Mod.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
     if ((typeof pseudoObj !== 'object' && typeof pseudoObj !== 'function') ||
         pseudoObj === null) {
         return pseudoObj;
     }
-    if (!(pseudoObj instanceof S8Interpreter.Object)) {
+    if (!(pseudoObj instanceof Mod.Object)) {
         throw Error('Object is not pseudo');
     }
 
@@ -2211,9 +2211,9 @@ S8Interpreter.prototype.pseudoToNative = function(pseudoObj, opt_cycles) {
  * Does handle non-numeric properties (like str.match's index prop).
  * Does NOT recurse into the array's contents.
  * @param {!Array} nativeArray The JavaScript array to be converted.
- * @return {!S8Interpreter.Object} The equivalent JS-Interpreter array.
+ * @return {!Mod.Object} The equivalent JS-Interpreter array.
  */
-S8Interpreter.prototype.arrayNativeToPseudo = function(nativeArray) {
+Mod.prototype.arrayNativeToPseudo = function(nativeArray) {
     const pseudoArray = this.createArray();
     const props = Object.getOwnPropertyNames(nativeArray);
     for (let i = 0; i < props.length; i++) {
@@ -2226,11 +2226,11 @@ S8Interpreter.prototype.arrayNativeToPseudo = function(nativeArray) {
  * Converts from a JS-Interpreter array to native JavaScript array.
  * Does handle non-numeric properties (like str.match's index prop).
  * Does NOT recurse into the array's contents.
- * @param {!S8Interpreter.Object} pseudoArray The JS-Interpreter array,
+ * @param {!Mod.Object} pseudoArray The JS-Interpreter array,
  *     or JS-Interpreter object pretending to be an array.
  * @return {!Array} The equivalent native JavaScript array.
  */
-S8Interpreter.prototype.arrayPseudoToNative = function(pseudoArray) {
+Mod.prototype.arrayPseudoToNative = function(pseudoArray) {
     const nativeArray = [];
     for (let key in pseudoArray.properties) {
         nativeArray[key] = this.getProperty(pseudoArray, key);
@@ -2238,17 +2238,17 @@ S8Interpreter.prototype.arrayPseudoToNative = function(pseudoArray) {
     // pseudoArray might be an object pretending to be an array.  In this case
     // it's possible that length is non-existent, invalid, or smaller than the
     // largest defined numeric property.  Set length explicitly here.
-    nativeArray.length = S8Interpreter.legalArrayLength(
+    nativeArray.length = Mod.legalArrayLength(
         this.getProperty(pseudoArray, 'length')) || 0;
     return nativeArray;
 };
 
 /**
  * Look up the prototype for this value.
- * @param {S8Interpreter.Value} value Data object.
- * @return {S8Interpreter.Object} Prototype object, null if none.
+ * @param {Mod.Value} value Data object.
+ * @return {Mod.Object} Prototype object, null if none.
  */
-S8Interpreter.prototype.getPrototype = function(value) {
+Mod.prototype.getPrototype = function(value) {
     switch (typeof value) {
         case 'number':
             return this.NUMBER.properties['prototype'];
@@ -2265,11 +2265,11 @@ S8Interpreter.prototype.getPrototype = function(value) {
 
 /**
  * Fetch a property value from a data object.
- * @param {S8Interpreter.Value} obj Data object.
- * @param {S8Interpreter.Value} name Name of property.
- * @return {S8Interpreter.Value} Property value (may be undefined).
+ * @param {Mod.Value} obj Data object.
+ * @param {Mod.Value} name Name of property.
+ * @return {Mod.Value} Property value (may be undefined).
  */
-S8Interpreter.prototype.getProperty = function(obj, name) {
+Mod.prototype.getProperty = function(obj, name) {
     if (this.getterStep_) {
         throw Error('Getter not supported in that context');
     }
@@ -2278,7 +2278,7 @@ S8Interpreter.prototype.getProperty = function(obj, name) {
         this.throwException(this.TYPE_ERROR,
             'Cannot read property \'' + name + '\' of ' + obj);
     }
-    if (typeof obj === 'object' && !(obj instanceof S8Interpreter.Object)) {
+    if (typeof obj === 'object' && !(obj instanceof Mod.Object)) {
         throw TypeError('Expecting native value or pseudo object');
     }
     if (name === 'length') {
@@ -2290,7 +2290,7 @@ S8Interpreter.prototype.getProperty = function(obj, name) {
         // Might have numbers in there?
         // Special cases for string array indexing
         if (this.isa(obj, this.STRING)) {
-            const n = S8Interpreter.legalArrayIndex(name);
+            const n = Mod.legalArrayIndex(name);
             if (!isNaN(n) && n < String(obj).length) {
                 return String(obj)[n];
             }
@@ -2313,12 +2313,12 @@ S8Interpreter.prototype.getProperty = function(obj, name) {
 
 /**
  * Does the named property exist on a data object.
- * @param {!S8Interpreter.Object} obj Data object.
- * @param {S8Interpreter.Value} name Name of property.
+ * @param {!Mod.Object} obj Data object.
+ * @param {Mod.Value} name Name of property.
  * @return {boolean} True if property exists.
  */
-S8Interpreter.prototype.hasProperty = function(obj, name) {
-    if (!(obj instanceof S8Interpreter.Object)) {
+Mod.prototype.hasProperty = function(obj, name) {
+    if (!(obj instanceof Mod.Object)) {
         throw TypeError('Primitive data type has no properties');
     }
     name = String(name);
@@ -2326,7 +2326,7 @@ S8Interpreter.prototype.hasProperty = function(obj, name) {
         return true;
     }
     if (this.isa(obj, this.STRING)) {
-        const n = S8Interpreter.legalArrayIndex(name);
+        const n = Mod.legalArrayIndex(name);
         if (!isNaN(n) && n < String(obj).length) {
             return true;
         }
@@ -2341,16 +2341,16 @@ S8Interpreter.prototype.hasProperty = function(obj, name) {
 
 /**
  * Set a property value on a data object.
- * @param {S8Interpreter.Value} obj Data object.
- * @param {S8Interpreter.Value} name Name of property.
- * @param {S8Interpreter.Value} value New property value.
+ * @param {Mod.Value} obj Data object.
+ * @param {Mod.Value} name Name of property.
+ * @param {Mod.Value} value New property value.
  *     Use Interpreter.VALUE_IN_DESCRIPTOR if value is handled by
  *     descriptor instead.
  * @param {Object=} opt_descriptor Optional descriptor object.
- * @return {!S8Interpreter.Object|undefined} Returns a setter function if one
+ * @return {!Mod.Object|undefined} Returns a setter function if one
  *     needs to be called, otherwise undefined.
  */
-S8Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor) {
+Mod.prototype.setProperty = function(obj, name, value, opt_descriptor) {
     if (this.setterStep_) {
         // Getter from previous call to setProperty was not handled.
         throw Error('Setter not supported in that context');
@@ -2360,7 +2360,7 @@ S8Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor)
         this.throwException(this.TYPE_ERROR,
             'Cannot set property \'' + name + '\' of ' + obj);
     }
-    if (typeof obj === 'object' && !(obj instanceof S8Interpreter.Object)) {
+    if (typeof obj === 'object' && !(obj instanceof Mod.Object)) {
         throw TypeError('Expecting native value or pseudo object');
     }
     if (opt_descriptor && ('get' in opt_descriptor || 'set' in opt_descriptor) &&
@@ -2369,7 +2369,7 @@ S8Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor)
             'Cannot both specify accessors and a value or writable attribute');
     }
     const strict = !this.stateStack || this.getScope().strict;
-    if (!(obj instanceof S8Interpreter.Object)) {
+    if (!(obj instanceof Mod.Object)) {
         if (strict) {
             this.throwException(this.TYPE_ERROR, 'Can\'t create property \'' + name +
                 '\' on \'' + obj + '\'');
@@ -2377,7 +2377,7 @@ S8Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor)
         return;
     }
     if (this.isa(obj, this.STRING)) {
-        const n = S8Interpreter.legalArrayIndex(name);
+        const n = Mod.legalArrayIndex(name);
         if (name === 'length' || (!isNaN(n) && n < String(obj).length)) {
             // Can't set length or letters on String objects.
             if (strict) {
@@ -2399,19 +2399,19 @@ S8Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor)
                 }
                 value = opt_descriptor.value;
             }
-            value = S8Interpreter.legalArrayLength(value);
+            value = Mod.legalArrayLength(value);
             if (isNaN(value)) {
                 this.throwException(this.RANGE_ERROR, 'Invalid array length');
             }
             if (value < length) {
                 for (i in obj.properties) {
-                    i = S8Interpreter.legalArrayIndex(i);
+                    i = Mod.legalArrayIndex(i);
                     if (!isNaN(i) && value <= i) {
                         delete obj.properties[i];
                     }
                 }
             }
-        } else if (!isNaN(i = S8Interpreter.legalArrayIndex(name))) {
+        } else if (!isNaN(i = Mod.legalArrayIndex(name))) {
             // Increase length if this index is larger.
             obj.properties.length = Math.max(length, i + 1);
         }
@@ -2455,7 +2455,7 @@ S8Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor)
             descriptor.value = opt_descriptor.value;
             delete obj.getter[name];
             delete obj.setter[name];
-        } else if (value !== S8Interpreter.VALUE_IN_DESCRIPTOR) {
+        } else if (value !== Mod.VALUE_IN_DESCRIPTOR) {
             descriptor.value = value;
             delete obj.getter[name];
             delete obj.setter[name];
@@ -2467,7 +2467,7 @@ S8Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor)
         }
     } else {
         // Set the property.
-        if (value === S8Interpreter.VALUE_IN_DESCRIPTOR) {
+        if (value === Mod.VALUE_IN_DESCRIPTOR) {
             throw ReferenceError('Value not specified.');
         }
         // Determine the parent (possibly self) where the property is defined.
@@ -2506,36 +2506,36 @@ S8Interpreter.prototype.setProperty = function(obj, name, value, opt_descriptor)
 /**
  * Convenience method for adding a native function as a non-enumerable property
  * onto an object's prototype.
- * @param {!S8Interpreter.Object} obj Data object.
- * @param {S8Interpreter.Value} name Name of property.
+ * @param {!Mod.Object} obj Data object.
+ * @param {Mod.Value} name Name of property.
  * @param {!Function} wrapper Function object.
  */
-S8Interpreter.prototype.setNativeFunctionPrototype =
+Mod.prototype.setNativeFunctionPrototype =
     function(obj, name, wrapper) {
         this.setProperty(obj.properties['prototype'], name,
             this.createNativeFunction(wrapper, false),
-            S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+            Mod.NONENUMERABLE_DESCRIPTOR);
     };
 
 /**
  * Convenience method for adding an async function as a non-enumerable property
  * onto an object's prototype.
- * @param {!S8Interpreter.Object} obj Data object.
- * @param {S8Interpreter.Value} name Name of property.
+ * @param {!Mod.Object} obj Data object.
+ * @param {Mod.Value} name Name of property.
  * @param {!Function} wrapper Function object.
  */
-S8Interpreter.prototype.setAsyncFunctionPrototype =
+Mod.prototype.setAsyncFunctionPrototype =
     function(obj, name, wrapper) {
         this.setProperty(obj.properties['prototype'], name,
             this.createAsyncFunction(wrapper),
-            S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+            Mod.NONENUMERABLE_DESCRIPTOR);
     };
 
 /**
  * Returns the current scope from the stateStack.
- * @return {!S8Interpreter.Scope} Current scope.
+ * @return {!Mod.Scope} Current scope.
  */
-S8Interpreter.prototype.getScope = function() {
+Mod.prototype.getScope = function() {
     const scope = this.stateStack[this.stateStack.length - 1].scope;
     if (!scope) {
         throw Error('No scope found.');
@@ -2547,10 +2547,10 @@ S8Interpreter.prototype.getScope = function() {
  * Create a new scope dictionary.
  * @param {!Object} node AST node defining the scope container
  *     (e.g. a function).
- * @param {S8Interpreter.Scope} parentScope Scope to link to.
- * @return {!S8Interpreter.Scope} New scope.
+ * @param {Mod.Scope} parentScope Scope to link to.
+ * @return {!Mod.Scope} New scope.
  */
-S8Interpreter.prototype.createScope = function(node, parentScope) {
+Mod.prototype.createScope = function(node, parentScope) {
     // Determine if this scope starts with `use strict`.
     let strict = false;
     if (parentScope && parentScope.strict) {
@@ -2564,7 +2564,7 @@ S8Interpreter.prototype.createScope = function(node, parentScope) {
         }
     }
     const object = this.createObjectProto(null);
-    const scope = new S8Interpreter.Scope(parentScope, strict, object);
+    const scope = new Mod.Scope(parentScope, strict, object);
     if (!parentScope) {
         this.initGlobal(scope.object);
     }
@@ -2576,27 +2576,27 @@ S8Interpreter.prototype.createScope = function(node, parentScope) {
  * Create a new special scope dictionary. Similar to createScope(), but
  * doesn't assume that the scope is for a function body.
  * This is used for 'catch' clauses and 'with' statements.
- * @param {!S8Interpreter.Scope} parentScope Scope to link to.
- * @param {S8Interpreter.Object=} opt_object Optional object to transform into
+ * @param {!Mod.Scope} parentScope Scope to link to.
+ * @param {Mod.Object=} opt_object Optional object to transform into
  *     scope.
- * @return {!S8Interpreter.Scope} New scope.
+ * @return {!Mod.Scope} New scope.
  */
-S8Interpreter.prototype.createSpecialScope = function(parentScope, opt_object) {
+Mod.prototype.createSpecialScope = function(parentScope, opt_object) {
     if (!parentScope) {
         throw Error('parentScope required');
     }
     const object = opt_object || this.createObjectProto(null);
-    return new S8Interpreter.Scope(parentScope, parentScope.strict, object);
+    return new Mod.Scope(parentScope, parentScope.strict, object);
 };
 
 /**
  * Retrieves a value from the scope chain.
  * @param {string} name Name of variable.
- * @return {S8Interpreter.Value} Any value.
+ * @return {Mod.Value} Any value.
  *   May be flagged as being a getter and thus needing immediate execution
  *   (rather than being the value of the property).
  */
-S8Interpreter.prototype.getValueFromScope = function(name) {
+Mod.prototype.getValueFromScope = function(name) {
     let scope = this.getScope();
     while (scope && scope !== this.globalScope) {
         if (name in scope.object.properties) {
@@ -2621,11 +2621,11 @@ S8Interpreter.prototype.getValueFromScope = function(name) {
 /**
  * Sets a value to the current scope.
  * @param {string} name Name of variable.
- * @param {S8Interpreter.Value} value Value.
- * @return {!S8Interpreter.Object|undefined} Returns a setter function if one
+ * @param {Mod.Value} value Value.
+ * @return {!Mod.Object|undefined} Returns a setter function if one
  *     needs to be called, otherwise undefined.
  */
-S8Interpreter.prototype.setValueToScope = function(name, value) {
+Mod.prototype.setValueToScope = function(name, value) {
     let scope = this.getScope();
     const strict = scope.strict;
     while (scope && scope !== this.globalScope) {
@@ -2647,18 +2647,18 @@ S8Interpreter.prototype.setValueToScope = function(name, value) {
 /**
  * Create a new scope for the given node.
  * @param {!Object} node AST node (program or function).
- * @param {!S8Interpreter.Scope} scope Scope dictionary to populate.
+ * @param {!Mod.Scope} scope Scope dictionary to populate.
  * @private
  */
-S8Interpreter.prototype.populateScope_ = function(node, scope) {
+Mod.prototype.populateScope_ = function(node, scope) {
     if (node['type'] === 'VariableDeclaration') {
         for (var i = 0; i < node['declarations'].length; i++) {
             this.setProperty(scope.object, node['declarations'][i]['id']['name'],
-                undefined, S8Interpreter.VARIABLE_DESCRIPTOR);
+                undefined, Mod.VARIABLE_DESCRIPTOR);
         }
     } else if (node['type'] === 'FunctionDeclaration') {
         this.setProperty(scope.object, node['id']['name'],
-            this.createFunction(node, scope), S8Interpreter.VARIABLE_DESCRIPTOR);
+            this.createFunction(node, scope), Mod.VARIABLE_DESCRIPTOR);
         return;  // Do not recurse into function.
     } else if (node['type'] === 'FunctionExpression') {
         return;  // Do not recurse into function.
@@ -2688,19 +2688,19 @@ S8Interpreter.prototype.populateScope_ = function(node, scope) {
  * Is the current state directly being called with as a construction with 'new'.
  * @return {boolean} True if 'new foo()', false if 'foo()'.
  */
-S8Interpreter.prototype.calledWithNew = function() {
+Mod.prototype.calledWithNew = function() {
     return this.stateStack[this.stateStack.length - 1].isConstructor;
 };
 
 /**
  * Gets a value from the scope chain or from an object property.
  * @param {!Array} ref Name of variable or object/propname tuple.
- * @return {S8Interpreter.Value} Any value.
+ * @return {Mod.Value} Any value.
  *   May be flagged as being a getter and thus needing immediate execution
  *   (rather than being the value of the property).
  */
-S8Interpreter.prototype.getValue = function(ref) {
-    if (ref[0] === S8Interpreter.SCOPE_REFERENCE) {
+Mod.prototype.getValue = function(ref) {
+    if (ref[0] === Mod.SCOPE_REFERENCE) {
         // A null/varname variable lookup.
         return this.getValueFromScope(ref[1]);
     } else {
@@ -2712,12 +2712,12 @@ S8Interpreter.prototype.getValue = function(ref) {
 /**
  * Sets a value to the scope chain or to an object property.
  * @param {!Array} ref Name of variable or object/propname tuple.
- * @param {S8Interpreter.Value} value Value.
- * @return {!S8Interpreter.Object|undefined} Returns a setter function if one
+ * @param {Mod.Value} value Value.
+ * @return {!Mod.Object|undefined} Returns a setter function if one
  *     needs to be called, otherwise undefined.
  */
-S8Interpreter.prototype.setValue = function(ref, value) {
-    if (ref[0] === S8Interpreter.SCOPE_REFERENCE) {
+Mod.prototype.setValue = function(ref, value) {
+    if (ref[0] === Mod.SCOPE_REFERENCE) {
         // A null/varname variable lookup.
         return this.setValueToScope(ref[1], value);
     } else {
@@ -2731,21 +2731,21 @@ S8Interpreter.prototype.setValue = function(ref, value) {
  * interpreter try/catch statement.  If unhandled, a real exception will
  * be thrown.  Can be called with either an error class and a message, or
  * with an actual object to be thrown.
- * @param {!S8Interpreter.Object|S8Interpreter.Value} errorClass Type of error
+ * @param {!Mod.Object|Mod.Value} errorClass Type of error
  *   (if message is provided) or the value to throw (if no message).
  * @param {string=} opt_message Message being thrown.
  */
-S8Interpreter.prototype.throwException = function(errorClass, opt_message) {
+Mod.prototype.throwException = function(errorClass, opt_message) {
     if (opt_message === undefined) {
         var error = errorClass;  // This is a value to throw, not an error class.
     } else {
         var error = this.createObject(errorClass);
         this.setProperty(error, 'message', opt_message,
-            S8Interpreter.NONENUMERABLE_DESCRIPTOR);
+            Mod.NONENUMERABLE_DESCRIPTOR);
     }
-    this.unwind(S8Interpreter.Completion.THROW, error, undefined);
+    this.unwind(Mod.Completion.THROW, error, undefined);
     // Abort anything related to the current step.
-    throw S8Interpreter.STEP_ERROR;
+    throw Mod.STEP_ERROR;
 };
 
 /**
@@ -2753,12 +2753,12 @@ S8Interpreter.prototype.throwException = function(errorClass, opt_message) {
  * For/ForIn/WhileStatement or Call/NewExpression.  If this results in
  * the stack being completely unwound the thread will be terminated
  * and the appropriate error being thrown.
- * @param {S8Interpreter.Completion} type Completion type.
- * @param {S8Interpreter.Value} value Value computed, returned or thrown.
+ * @param {Mod.Completion} type Completion type.
+ * @param {Mod.Value} value Value computed, returned or thrown.
  * @param {string|undefined} label Target label for break or return.
  */
-S8Interpreter.prototype.unwind = function(type, value, label) {
-    if (type === S8Interpreter.Completion.NORMAL) {
+Mod.prototype.unwind = function(type, value, label) {
+    if (type === Mod.Completion.NORMAL) {
         throw TypeError('Should not unwind for NORMAL completions');
     }
 
@@ -2770,10 +2770,10 @@ S8Interpreter.prototype.unwind = function(type, value, label) {
                 return;
             case 'CallExpression':
             case 'NewExpression':
-                if (type === S8Interpreter.Completion.RETURN) {
+                if (type === Mod.Completion.RETURN) {
                     state.value = value;
                     return;
-                } else if (type !== S8Interpreter.Completion.THROW) {
+                } else if (type !== Mod.Completion.THROW) {
                     throw Error('Unsynatctic break/continue not rejected by Acorn');
                 }
                 break;
@@ -2783,13 +2783,13 @@ S8Interpreter.prototype.unwind = function(type, value, label) {
                 state.done = true;
                 break loop;
         }
-        if (type === S8Interpreter.Completion.BREAK) {
+        if (type === Mod.Completion.BREAK) {
             if (label ? (state.labels && state.labels.indexOf(label) !== -1) :
                 (state.isLoop || state.isSwitch)) {
                 stack.pop();
                 return;
             }
-        } else if (type === S8Interpreter.Completion.CONTINUE) {
+        } else if (type === Mod.Completion.CONTINUE) {
             if (label ? (state.labels && state.labels.indexOf(label) !== -1) :
                 state.isLoop) {
                 return;
@@ -2820,12 +2820,12 @@ S8Interpreter.prototype.unwind = function(type, value, label) {
 
 /**
  * Create a call to a getter function.
- * @param {!S8Interpreter.Object} func Function to execute.
- * @param {!S8Interpreter.Object|!Array} left
+ * @param {!Mod.Object} func Function to execute.
+ * @param {!Mod.Object|!Array} left
  *     Name of variable or object/propname tuple.
  * @private
  */
-S8Interpreter.prototype.createGetter_ = function(func, left) {
+Mod.prototype.createGetter_ = function(func, left) {
     if (!this.getterStep_) {
         throw Error('Unexpected call to createGetter');
     }
@@ -2836,7 +2836,7 @@ S8Interpreter.prototype.createGetter_ = function(func, left) {
     const funcThis = Array.isArray(left) ? left[0] : left;
     const node = new this.nodeConstructor({ options: {} });
     node['type'] = 'CallExpression';
-    const state = new S8Interpreter.State(node,
+    const state = new Mod.State(node,
         this.stateStack[this.stateStack.length - 1].scope);
     state.doneCallee_ = true;
     state.funcThis_ = funcThis;
@@ -2848,13 +2848,13 @@ S8Interpreter.prototype.createGetter_ = function(func, left) {
 
 /**
  * Create a call to a setter function.
- * @param {!S8Interpreter.Object} func Function to execute.
- * @param {!S8Interpreter.Object|!Array} left
+ * @param {!Mod.Object} func Function to execute.
+ * @param {!Mod.Object|!Array} left
  *     Name of variable or object/propname tuple.
- * @param {S8Interpreter.Value} value Value to set.
+ * @param {Mod.Value} value Value to set.
  * @private
  */
-S8Interpreter.prototype.createSetter_ = function(func, left, value) {
+Mod.prototype.createSetter_ = function(func, left, value) {
     if (!this.setterStep_) {
         throw Error('Unexpected call to createSetter');
     }
@@ -2865,7 +2865,7 @@ S8Interpreter.prototype.createSetter_ = function(func, left, value) {
     const funcThis = Array.isArray(left) ? left[0] : this.globalObject;
     const node = new this.nodeConstructor({ options: {} });
     node['type'] = 'CallExpression';
-    const state = new S8Interpreter.State(node,
+    const state = new Mod.State(node,
         this.stateStack[this.stateStack.length - 1].scope);
     state.doneCallee_ = true;
     state.funcThis_ = funcThis;
@@ -2877,30 +2877,30 @@ S8Interpreter.prototype.createSetter_ = function(func, left, value) {
 
 /**
  * Typedef for JS values.
- * @typedef {!S8Interpreter.Object|boolean|number|string|undefined|null}
+ * @typedef {!Mod.Object|boolean|number|string|undefined|null}
  */
-S8Interpreter.Value;
+Mod.Value;
 
 /**
  * Class for a state.
  * @param {!Object} node AST node for the state.
- * @param {!S8Interpreter.Scope} scope Scope object for the state.
+ * @param {!Mod.Scope} scope Scope object for the state.
  * @constructor
  */
-S8Interpreter.State = function(node, scope) {
+Mod.State = function(node, scope) {
     this.node = node;
     this.scope = scope;
 };
 
 /**
  * Class for a scope.
- * @param {S8Interpreter.Scope} parentScope Parent scope.
+ * @param {Mod.Scope} parentScope Parent scope.
  * @param {boolean} strict True if "use strict".
- * @param {!S8Interpreter.Object} object Object containing scope's variables.
+ * @param {!Mod.Object} object Object containing scope's variables.
  * @struct
  * @constructor
  */
-S8Interpreter.Scope = function(parentScope, strict, object) {
+Mod.Scope = function(parentScope, strict, object) {
     this.parentScope = parentScope;
     this.strict = strict;
     this.object = object;
@@ -2908,45 +2908,45 @@ S8Interpreter.Scope = function(parentScope, strict, object) {
 
 /**
  * Class for an object.
- * @param {S8Interpreter.Object} proto Prototype object or null.
+ * @param {Mod.Object} proto Prototype object or null.
  * @constructor
  */
-S8Interpreter.Object = function(proto) {
+Mod.Object = function(proto) {
     this.getter = Object.create(null);
     this.setter = Object.create(null);
     this.properties = Object.create(null);
     this.proto = proto;
 };
 
-/** @type {S8Interpreter.Object} */
-S8Interpreter.Object.prototype.proto = null;
+/** @type {Mod.Object} */
+Mod.Object.prototype.proto = null;
 
 /** @type {string} */
-S8Interpreter.Object.prototype.class = 'Object';
+Mod.Object.prototype.class = 'Object';
 
 /** @type {Date|RegExp|boolean|number|string|null} */
-S8Interpreter.Object.prototype.data = null;
+Mod.Object.prototype.data = null;
 
 /**
  * Convert this object into a string.
  * @return {string} String value.
  * @override
  */
-S8Interpreter.Object.prototype.toString = function() {
-    if (!(this instanceof S8Interpreter.Object)) {
+Mod.Object.prototype.toString = function() {
+    if (!(this instanceof Mod.Object)) {
         // Primitive value.
         return String(this);
     }
 
     if (this.class === 'Array') {
         // Array contents must not have cycles.
-        var cycles = S8Interpreter.toStringCycles_;
+        var cycles = Mod.toStringCycles_;
         cycles.push(this);
         try {
             var strs = [];
             for (let i = 0; i < this.properties.length; i++) {
                 const value = this.properties[i];
-                strs[i] = ((value instanceof S8Interpreter.Object) &&
+                strs[i] = ((value instanceof Mod.Object) &&
                     cycles.indexOf(value) !== -1) ? '...' : value;
             }
         } finally {
@@ -2957,7 +2957,7 @@ S8Interpreter.Object.prototype.toString = function() {
 
     if (this.class === 'Error') {
         // Error name and message properties must not have cycles.
-        var cycles = S8Interpreter.toStringCycles_;
+        var cycles = Mod.toStringCycles_;
         if (cycles.indexOf(this) !== -1) {
             return '[object Error]';
         }
@@ -2997,10 +2997,10 @@ S8Interpreter.Object.prototype.toString = function() {
 
 /**
  * Return the object's value.
- * @return {S8Interpreter.Value} Value.
+ * @return {Mod.Value} Value.
  * @override
  */
-S8Interpreter.Object.prototype.valueOf = function() {
+Mod.Object.prototype.valueOf = function() {
     if (this.data === undefined || this.data === null ||
         this.data instanceof RegExp) {
         return this;  // An Object, RegExp, or primitive.
@@ -3015,7 +3015,7 @@ S8Interpreter.Object.prototype.valueOf = function() {
 // Functions to handle each node type.
 ///////////////////////////////////////////////////////////////////////////////
 
-S8Interpreter.prototype['stepArrayExpression'] = function(stack, state, node) {
+Mod.prototype['stepArrayExpression'] = function(stack, state, node) {
     const elements = node['elements'];
     let n = state.n_ || 0;
     if (!state.array_) {
@@ -3029,7 +3029,7 @@ S8Interpreter.prototype['stepArrayExpression'] = function(stack, state, node) {
         // Skip missing elements - they're not defined, not undefined.
         if (elements[n]) {
             state.n_ = n;
-            return new S8Interpreter.State(elements[n], state.scope);
+            return new Mod.State(elements[n], state.scope);
         }
         n++;
     }
@@ -3037,11 +3037,11 @@ S8Interpreter.prototype['stepArrayExpression'] = function(stack, state, node) {
     stack[stack.length - 1].value = state.array_;
 };
 
-S8Interpreter.prototype['stepAssignmentExpression'] =
+Mod.prototype['stepAssignmentExpression'] =
     function(stack, state, node) {
         if (!state.doneLeft_) {
             state.doneLeft_ = true;
-            const nextState = new S8Interpreter.State(node['left'], state.scope);
+            const nextState = new Mod.State(node['left'], state.scope);
             nextState.components = true;
             return nextState;
         }
@@ -3058,12 +3058,12 @@ S8Interpreter.prototype['stepAssignmentExpression'] =
                 if (this.getterStep_) {
                     // Call the getter function.
                     state.doneGetter_ = true;
-                    const func = /** @type {!S8Interpreter.Object} */ (leftValue);
+                    const func = /** @type {!Mod.Object} */ (leftValue);
                     return this.createGetter_(func, state.leftReference_);
                 }
             }
             state.doneRight_ = true;
-            return new S8Interpreter.State(node['right'], state.scope);
+            return new Mod.State(node['right'], state.scope);
         }
         if (state.doneSetter_) {
             // Return if setter function.
@@ -3126,15 +3126,15 @@ S8Interpreter.prototype['stepAssignmentExpression'] =
         stack[stack.length - 1].value = value;
     };
 
-S8Interpreter.prototype['stepBinaryExpression'] = function(stack, state, node) {
+Mod.prototype['stepBinaryExpression'] = function(stack, state, node) {
     if (!state.doneLeft_) {
         state.doneLeft_ = true;
-        return new S8Interpreter.State(node['left'], state.scope);
+        return new Mod.State(node['left'], state.scope);
     }
     if (!state.doneRight_) {
         state.doneRight_ = true;
         state.leftValue_ = state.value;
-        return new S8Interpreter.State(node['right'], state.scope);
+        return new Mod.State(node['right'], state.scope);
     }
     stack.pop();
     const leftValue = state.leftValue_;
@@ -3199,7 +3199,7 @@ S8Interpreter.prototype['stepBinaryExpression'] = function(stack, state, node) {
             value = leftValue >>> rightValue;
             break;
         case 'in':
-            if (!(rightValue instanceof S8Interpreter.Object)) {
+            if (!(rightValue instanceof Mod.Object)) {
                 this.throwException(this.TYPE_ERROR,
                     '\'in\' expects an object, not \'' + rightValue + '\'');
             }
@@ -3210,7 +3210,7 @@ S8Interpreter.prototype['stepBinaryExpression'] = function(stack, state, node) {
                 this.throwException(this.TYPE_ERROR,
                     'Right-hand side of instanceof is not an object');
             }
-            value = (leftValue instanceof S8Interpreter.Object) ?
+            value = (leftValue instanceof Mod.Object) ?
                 this.isa(leftValue, rightValue) : false;
             break;
         default:
@@ -3219,26 +3219,26 @@ S8Interpreter.prototype['stepBinaryExpression'] = function(stack, state, node) {
     stack[stack.length - 1].value = value;
 };
 
-S8Interpreter.prototype['stepBlockStatement'] = function(stack, state, node) {
+Mod.prototype['stepBlockStatement'] = function(stack, state, node) {
     const n = state.n_ || 0;
     const expression = node['body'][n];
     if (expression) {
         state.n_ = n + 1;
-        return new S8Interpreter.State(expression, state.scope);
+        return new Mod.State(expression, state.scope);
     }
     stack.pop();
 };
 
-S8Interpreter.prototype['stepBreakStatement'] = function(stack, state, node) {
+Mod.prototype['stepBreakStatement'] = function(stack, state, node) {
     const label = node['label'] && node['label']['name'];
-    this.unwind(S8Interpreter.Completion.BREAK, undefined, label);
+    this.unwind(Mod.Completion.BREAK, undefined, label);
 };
 
-S8Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
+Mod.prototype['stepCallExpression'] = function(stack, state, node) {
     if (!state.doneCallee_) {
         state.doneCallee_ = 1;
         // Components needed to determine value of `this`.
-        const nextState = new S8Interpreter.State(node['callee'], state.scope);
+        const nextState = new Mod.State(node['callee'], state.scope);
         nextState.components = true;
         return nextState;
     }
@@ -3248,7 +3248,7 @@ S8Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
         var func = state.value;
         if (Array.isArray(func)) {
             state.func_ = this.getValue(func);
-            if (func[0] === S8Interpreter.SCOPE_REFERENCE) {
+            if (func[0] === Mod.SCOPE_REFERENCE) {
                 // (Globally or locally) named function.  Is it named 'eval'?
                 state.directEval_ = (func[1] === 'eval');
             } else {
@@ -3259,7 +3259,7 @@ S8Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
             if (this.getterStep_) {
                 // Call the getter function.
                 state.doneCallee_ = 1;
-                return this.createGetter_(/** @type {!S8Interpreter.Object} */ (func),
+                return this.createGetter_(/** @type {!Mod.Object} */ (func),
                     state.value);
             }
         } else {
@@ -3275,7 +3275,7 @@ S8Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
             state.arguments_.push(state.value);
         }
         if (node['arguments'][state.n_]) {
-            return new S8Interpreter.State(node['arguments'][state.n_++], state.scope);
+            return new Mod.State(node['arguments'][state.n_++], state.scope);
         }
         // Determine value of `this` in function.
         if (node['type'] === 'NewExpression') {
@@ -3303,7 +3303,7 @@ S8Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
     }
     if (!state.doneExec_) {
         state.doneExec_ = true;
-        if (!(func instanceof S8Interpreter.Object)) {
+        if (!(func instanceof Mod.Object)) {
             this.throwException(this.TYPE_ERROR, func + ' is not a function');
         }
         const funcNode = func.node;
@@ -3328,9 +3328,9 @@ S8Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
                 this.setProperty(scope.object, name, func);
             }
             this.setProperty(scope.object, 'this', state.funcThis_,
-                S8Interpreter.READONLY_DESCRIPTOR);
+                Mod.READONLY_DESCRIPTOR);
             state.value = undefined;  // Default value if no explicit return.
-            return new S8Interpreter.State(funcNode['body'], scope);
+            return new Mod.State(funcNode['body'], scope);
         } else if (func.eval) {
             const code = state.arguments_[0];
             if (typeof code !== 'string') {
@@ -3339,7 +3339,7 @@ S8Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
                 state.value = code;
             } else {
                 try {
-                    var ast = acorn.parse(String(code), S8Interpreter.PARSE_OPTIONS);
+                    var ast = acorn.parse(String(code), Mod.PARSE_OPTIONS);
                 } catch (e) {
                     // Acorn threw a SyntaxError.  Rethrow as a trappable error.
                     this.throwException(this.SYNTAX_ERROR, 'Invalid code: ' + e.message);
@@ -3347,7 +3347,7 @@ S8Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
                 const evalNode = new this.nodeConstructor({ options: {} });
                 evalNode['type'] = 'EvalProgram_';
                 evalNode['body'] = ast['body'];
-                S8Interpreter.stripLocations_(evalNode, node['start'], node['end']);
+                Mod.stripLocations_(evalNode, node['start'], node['end']);
                 // Create new scope and update it with definitions in eval().
                 var scope = state.directEval_ ? state.scope : this.globalScope;
                 if (scope.strict) {
@@ -3358,7 +3358,7 @@ S8Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
                     this.populateScope_(ast, scope);
                 }
                 this.value = undefined;  // Default value if no code.
-                return new S8Interpreter.State(evalNode, scope);
+                return new Mod.State(evalNode, scope);
             }
         } else if (func.nativeFunc) {
             state.value = func.nativeFunc.apply(state.funcThis_, state.arguments_);
@@ -3399,7 +3399,7 @@ S8Interpreter.prototype['stepCallExpression'] = function(stack, state, node) {
     }
 };
 
-S8Interpreter.prototype['stepCatchClause'] = function(stack, state, node) {
+Mod.prototype['stepCatchClause'] = function(stack, state, node) {
     if (!state.done_) {
         state.done_ = true;
         // Create an empty scope.
@@ -3407,28 +3407,28 @@ S8Interpreter.prototype['stepCatchClause'] = function(stack, state, node) {
         // Add the argument.
         this.setProperty(scope.object, node['param']['name'], state.throwValue);
         // Execute catch clause.
-        return new S8Interpreter.State(node['body'], scope);
+        return new Mod.State(node['body'], scope);
     } else {
         stack.pop();
     }
 };
 
-S8Interpreter.prototype['stepConditionalExpression'] =
+Mod.prototype['stepConditionalExpression'] =
     function(stack, state, node) {
         const mode = state.mode_ || 0;
         if (mode === 0) {
             state.mode_ = 1;
-            return new S8Interpreter.State(node['test'], state.scope);
+            return new Mod.State(node['test'], state.scope);
         }
         if (mode === 1) {
             state.mode_ = 2;
             const value = Boolean(state.value);
             if (value && node['consequent']) {
                 // Execute `if` block.
-                return new S8Interpreter.State(node['consequent'], state.scope);
+                return new Mod.State(node['consequent'], state.scope);
             } else if (!value && node['alternate']) {
                 // Execute `else` block.
-                return new S8Interpreter.State(node['alternate'], state.scope);
+                return new Mod.State(node['alternate'], state.scope);
             }
             // eval('1;if(false){2}') -> undefined
             this.value = undefined;
@@ -3439,17 +3439,17 @@ S8Interpreter.prototype['stepConditionalExpression'] =
         }
     };
 
-S8Interpreter.prototype['stepContinueStatement'] = function(stack, state, node) {
+Mod.prototype['stepContinueStatement'] = function(stack, state, node) {
     const label = node['label'] && node['label']['name'];
-    this.unwind(S8Interpreter.Completion.CONTINUE, undefined, label);
+    this.unwind(Mod.Completion.CONTINUE, undefined, label);
 };
 
-S8Interpreter.prototype['stepDebuggerStatement'] = function(stack, state, node) {
+Mod.prototype['stepDebuggerStatement'] = function(stack, state, node) {
     // Do nothing.  May be overridden by developers.
     stack.pop();
 };
 
-S8Interpreter.prototype['stepDoWhileStatement'] = function(stack, state, node) {
+Mod.prototype['stepDoWhileStatement'] = function(stack, state, node) {
     if (node['type'] === 'DoWhileStatement' && state.test_ === undefined) {
         // First iteration of do/while executes without checking test.
         state.value = true;
@@ -3457,36 +3457,36 @@ S8Interpreter.prototype['stepDoWhileStatement'] = function(stack, state, node) {
     }
     if (!state.test_) {
         state.test_ = true;
-        return new S8Interpreter.State(node['test'], state.scope);
+        return new Mod.State(node['test'], state.scope);
     }
     if (!state.value) {  // Done, exit loop.
         stack.pop();
     } else if (node['body']) {  // Execute the body.
         state.test_ = false;
         state.isLoop = true;
-        return new S8Interpreter.State(node['body'], state.scope);
+        return new Mod.State(node['body'], state.scope);
     }
 };
 
-S8Interpreter.prototype['stepEmptyStatement'] = function(stack, state, node) {
+Mod.prototype['stepEmptyStatement'] = function(stack, state, node) {
     stack.pop();
 };
 
-S8Interpreter.prototype['stepEvalProgram_'] = function(stack, state, node) {
+Mod.prototype['stepEvalProgram_'] = function(stack, state, node) {
     const n = state.n_ || 0;
     const expression = node['body'][n];
     if (expression) {
         state.n_ = n + 1;
-        return new S8Interpreter.State(expression, state.scope);
+        return new Mod.State(expression, state.scope);
     }
     stack.pop();
     stack[stack.length - 1].value = this.value;
 };
 
-S8Interpreter.prototype['stepExpressionStatement'] = function(stack, state, node) {
+Mod.prototype['stepExpressionStatement'] = function(stack, state, node) {
     if (!state.done_) {
         state.done_ = true;
-        return new S8Interpreter.State(node['expression'], state.scope);
+        return new Mod.State(node['expression'], state.scope);
     }
     stack.pop();
     // Save this value to interpreter.value for use as a return value if
@@ -3494,7 +3494,7 @@ S8Interpreter.prototype['stepExpressionStatement'] = function(stack, state, node
     this.value = state.value;
 };
 
-S8Interpreter.prototype['stepForInStatement'] = function(stack, state, node) {
+Mod.prototype['stepForInStatement'] = function(stack, state, node) {
     // First, initialize a variable if exists.  Only do so once, ever.
     if (!state.doneInit_) {
         state.doneInit_ = true;
@@ -3505,7 +3505,7 @@ S8Interpreter.prototype['stepForInStatement'] = function(stack, state, node) {
                     'for-in loop variable declaration may not have an initializer.');
             }
             // Variable initialization: for (var x = 4 in y)
-            return new S8Interpreter.State(node['left'], state.scope);
+            return new Mod.State(node['left'], state.scope);
         }
     }
     // Second, look up the object.  Only do so once, ever.
@@ -3514,7 +3514,7 @@ S8Interpreter.prototype['stepForInStatement'] = function(stack, state, node) {
         if (!state.variable_) {
             state.variable_ = state.value;
         }
-        return new S8Interpreter.State(node['right'], state.scope);
+        return new Mod.State(node['right'], state.scope);
     }
     if (!state.isLoop) {
         // First iteration.
@@ -3525,7 +3525,7 @@ S8Interpreter.prototype['stepForInStatement'] = function(stack, state, node) {
     // Third, find the property name for this iteration.
     if (state.name_ === undefined) {
         gotPropName: while (true) {
-            if (state.object_ instanceof S8Interpreter.Object) {
+            if (state.object_ instanceof Mod.Object) {
                 if (!state.props_) {
                     state.props_ = Object.getOwnPropertyNames(state.object_.properties);
                 }
@@ -3584,11 +3584,11 @@ S8Interpreter.prototype['stepForInStatement'] = function(stack, state, node) {
         if (left['type'] === 'VariableDeclaration') {
             // Inline variable declaration: for (var x in y)
             state.variable_ =
-                [S8Interpreter.SCOPE_REFERENCE, left['declarations'][0]['id']['name']];
+                [Mod.SCOPE_REFERENCE, left['declarations'][0]['id']['name']];
         } else {
             // Arbitrary left side: for (foo().bar in y)
             state.variable_ = null;
-            const nextState = new S8Interpreter.State(left, state.scope);
+            const nextState = new Mod.State(left, state.scope);
             nextState.components = true;
             return nextState;
         }
@@ -3612,21 +3612,21 @@ S8Interpreter.prototype['stepForInStatement'] = function(stack, state, node) {
     state.doneSetter_ = false;
     // Sixth and finally, execute the body if there was one.  this.
     if (node['body']) {
-        return new S8Interpreter.State(node['body'], state.scope);
+        return new Mod.State(node['body'], state.scope);
     }
 };
 
-S8Interpreter.prototype['stepForStatement'] = function(stack, state, node) {
+Mod.prototype['stepForStatement'] = function(stack, state, node) {
     const mode = state.mode_ || 0;
     if (mode === 0) {
         state.mode_ = 1;
         if (node['init']) {
-            return new S8Interpreter.State(node['init'], state.scope);
+            return new Mod.State(node['init'], state.scope);
         }
     } else if (mode === 1) {
         state.mode_ = 2;
         if (node['test']) {
-            return new S8Interpreter.State(node['test'], state.scope);
+            return new Mod.State(node['test'], state.scope);
         }
     } else if (mode === 2) {
         state.mode_ = 3;
@@ -3635,31 +3635,31 @@ S8Interpreter.prototype['stepForStatement'] = function(stack, state, node) {
             stack.pop();
         } else {  // Execute the body.
             state.isLoop = true;
-            return new S8Interpreter.State(node['body'], state.scope);
+            return new Mod.State(node['body'], state.scope);
         }
     } else if (mode === 3) {
         state.mode_ = 1;
         if (node['update']) {
-            return new S8Interpreter.State(node['update'], state.scope);
+            return new Mod.State(node['update'], state.scope);
         }
     }
 };
 
-S8Interpreter.prototype['stepFunctionDeclaration'] =
+Mod.prototype['stepFunctionDeclaration'] =
     function(stack, state, node) {
         // This was found and handled when the scope was populated.
         stack.pop();
     };
 
-S8Interpreter.prototype['stepFunctionExpression'] = function(stack, state, node) {
+Mod.prototype['stepFunctionExpression'] = function(stack, state, node) {
     stack.pop();
     stack[stack.length - 1].value = this.createFunction(node, state.scope);
 };
 
-S8Interpreter.prototype['stepIdentifier'] = function(stack, state, node) {
+Mod.prototype['stepIdentifier'] = function(stack, state, node) {
     stack.pop();
     if (state.components) {
-        stack[stack.length - 1].value = [S8Interpreter.SCOPE_REFERENCE, node['name']];
+        stack[stack.length - 1].value = [Mod.SCOPE_REFERENCE, node['name']];
         return;
     }
     const value = this.getValueFromScope(node['name']);
@@ -3670,27 +3670,27 @@ S8Interpreter.prototype['stepIdentifier'] = function(stack, state, node) {
         while (!this.hasProperty(scope, node['name'])) {
             scope = scope.parentScope;
         }
-        const func = /** @type {!S8Interpreter.Object} */ (value);
+        const func = /** @type {!Mod.Object} */ (value);
         return this.createGetter_(func, this.globalObject);
     }
     stack[stack.length - 1].value = value;
 };
 
-S8Interpreter.prototype['stepIfStatement'] =
-    S8Interpreter.prototype['stepConditionalExpression'];
+Mod.prototype['stepIfStatement'] =
+    Mod.prototype['stepConditionalExpression'];
 
-S8Interpreter.prototype['stepLabeledStatement'] = function(stack, state, node) {
+Mod.prototype['stepLabeledStatement'] = function(stack, state, node) {
     // No need to hit this node again on the way back up the stack.
     stack.pop();
     // Note that a statement might have multiple labels.
     const labels = state.labels || [];
     labels.push(node['label']['name']);
-    const nextState = new S8Interpreter.State(node['body'], state.scope);
+    const nextState = new Mod.State(node['body'], state.scope);
     nextState.labels = labels;
     return nextState;
 };
 
-S8Interpreter.prototype['stepLiteral'] = function(stack, state, node) {
+Mod.prototype['stepLiteral'] = function(stack, state, node) {
     stack.pop();
     let value = node['value'];
     if (value instanceof RegExp) {
@@ -3701,13 +3701,13 @@ S8Interpreter.prototype['stepLiteral'] = function(stack, state, node) {
     stack[stack.length - 1].value = value;
 };
 
-S8Interpreter.prototype['stepLogicalExpression'] = function(stack, state, node) {
+Mod.prototype['stepLogicalExpression'] = function(stack, state, node) {
     if (node['operator'] !== '&&' && node['operator'] !== '||') {
         throw SyntaxError('Unknown logical operator: ' + node['operator']);
     }
     if (!state.doneLeft_) {
         state.doneLeft_ = true;
-        return new S8Interpreter.State(node['left'], state.scope);
+        return new Mod.State(node['left'], state.scope);
     }
     if (!state.doneRight_) {
         if ((node['operator'] === '&&' && !state.value) ||
@@ -3717,7 +3717,7 @@ S8Interpreter.prototype['stepLogicalExpression'] = function(stack, state, node) 
             stack[stack.length - 1].value = state.value;
         } else {
             state.doneRight_ = true;
-            return new S8Interpreter.State(node['right'], state.scope);
+            return new Mod.State(node['right'], state.scope);
         }
     } else {
         stack.pop();
@@ -3725,10 +3725,10 @@ S8Interpreter.prototype['stepLogicalExpression'] = function(stack, state, node) 
     }
 };
 
-S8Interpreter.prototype['stepMemberExpression'] = function(stack, state, node) {
+Mod.prototype['stepMemberExpression'] = function(stack, state, node) {
     if (!state.doneObject_) {
         state.doneObject_ = true;
-        return new S8Interpreter.State(node['object'], state.scope);
+        return new Mod.State(node['object'], state.scope);
     }
     let propName;
     if (!node['computed']) {
@@ -3739,7 +3739,7 @@ S8Interpreter.prototype['stepMemberExpression'] = function(stack, state, node) {
         state.object_ = state.value;
         // obj[foo] -- Compute value of `foo`.
         state.doneProperty_ = true;
-        return new S8Interpreter.State(node['property'], state.scope);
+        return new Mod.State(node['property'], state.scope);
     } else {
         propName = state.value;
     }
@@ -3750,17 +3750,17 @@ S8Interpreter.prototype['stepMemberExpression'] = function(stack, state, node) {
         const value = this.getProperty(state.object_, propName);
         if (this.getterStep_) {
             // Call the getter function.
-            const func = /** @type {!S8Interpreter.Object} */ (value);
+            const func = /** @type {!Mod.Object} */ (value);
             return this.createGetter_(func, state.object_);
         }
         stack[stack.length - 1].value = value;
     }
 };
 
-S8Interpreter.prototype['stepNewExpression'] =
-    S8Interpreter.prototype['stepCallExpression'];
+Mod.prototype['stepNewExpression'] =
+    Mod.prototype['stepCallExpression'];
 
-S8Interpreter.prototype['stepObjectExpression'] = function(stack, state, node) {
+Mod.prototype['stepObjectExpression'] = function(stack, state, node) {
     let n = state.n_ || 0;
     let property = node['properties'][n];
     if (!state.object_) {
@@ -3787,7 +3787,7 @@ S8Interpreter.prototype['stepObjectExpression'] = function(stack, state, node) {
         property = node['properties'][n];
     }
     if (property) {
-        return new S8Interpreter.State(property['value'], state.scope);
+        return new Mod.State(property['value'], state.scope);
     }
     for (var key in state.properties_) {
         const kinds = state.properties_[key];
@@ -3799,7 +3799,7 @@ S8Interpreter.prototype['stepObjectExpression'] = function(stack, state, node) {
                 get: kinds['get'],
                 set: kinds['set'],
             };
-            this.setProperty(state.object_, key, S8Interpreter.VALUE_IN_DESCRIPTOR,
+            this.setProperty(state.object_, key, Mod.VALUE_IN_DESCRIPTOR,
                 descriptor);
         } else {
             // Set a normal property with a value.
@@ -3810,40 +3810,40 @@ S8Interpreter.prototype['stepObjectExpression'] = function(stack, state, node) {
     stack[stack.length - 1].value = state.object_;
 };
 
-S8Interpreter.prototype['stepProgram'] = function(stack, state, node) {
+Mod.prototype['stepProgram'] = function(stack, state, node) {
     const expression = node['body'].shift();
     if (expression) {
         state.done = false;
-        return new S8Interpreter.State(expression, state.scope);
+        return new Mod.State(expression, state.scope);
     }
     state.done = true;
     // Don't pop the stateStack.
     // Leave the root scope on the tree in case the program is appended to.
 };
 
-S8Interpreter.prototype['stepReturnStatement'] = function(stack, state, node) {
+Mod.prototype['stepReturnStatement'] = function(stack, state, node) {
     if (node['argument'] && !state.done_) {
         state.done_ = true;
-        return new S8Interpreter.State(node['argument'], state.scope);
+        return new Mod.State(node['argument'], state.scope);
     }
-    this.unwind(S8Interpreter.Completion.RETURN, state.value, undefined);
+    this.unwind(Mod.Completion.RETURN, state.value, undefined);
 };
 
-S8Interpreter.prototype['stepSequenceExpression'] = function(stack, state, node) {
+Mod.prototype['stepSequenceExpression'] = function(stack, state, node) {
     const n = state.n_ || 0;
     const expression = node['expressions'][n];
     if (expression) {
         state.n_ = n + 1;
-        return new S8Interpreter.State(expression, state.scope);
+        return new Mod.State(expression, state.scope);
     }
     stack.pop();
     stack[stack.length - 1].value = state.value;
 };
 
-S8Interpreter.prototype['stepSwitchStatement'] = function(stack, state, node) {
+Mod.prototype['stepSwitchStatement'] = function(stack, state, node) {
     if (!state.test_) {
         state.test_ = 1;
-        return new S8Interpreter.State(node['discriminant'], state.scope);
+        return new Mod.State(node['discriminant'], state.scope);
     }
     if (state.test_ === 1) {
         state.test_ = 2;
@@ -3871,7 +3871,7 @@ S8Interpreter.prototype['stepSwitchStatement'] = function(stack, state, node) {
         if (switchCase) {
             if (!state.matched_ && !state.tested_ && switchCase['test']) {
                 state.tested_ = true;
-                return new S8Interpreter.State(switchCase['test'], state.scope);
+                return new Mod.State(switchCase['test'], state.scope);
             }
             if (state.matched_ || state.value === state.switchValue_) {
                 state.matched_ = true;
@@ -3879,7 +3879,7 @@ S8Interpreter.prototype['stepSwitchStatement'] = function(stack, state, node) {
                 if (switchCase['consequent'][n]) {
                     state.isSwitch = true;
                     state.n_ = n + 1;
-                    return new S8Interpreter.State(switchCase['consequent'][n],
+                    return new Mod.State(switchCase['consequent'][n],
                         state.scope);
                 }
             }
@@ -3894,36 +3894,36 @@ S8Interpreter.prototype['stepSwitchStatement'] = function(stack, state, node) {
     }
 };
 
-S8Interpreter.prototype['stepThisExpression'] = function(stack) {
+Mod.prototype['stepThisExpression'] = function(stack) {
     stack.pop();
     stack[stack.length - 1].value = this.getValueFromScope('this');
 };
 
-S8Interpreter.prototype['stepThrowStatement'] = function(stack, state, node) {
+Mod.prototype['stepThrowStatement'] = function(stack, state, node) {
     if (!state.done_) {
         state.done_ = true;
-        return new S8Interpreter.State(node['argument'], state.scope);
+        return new Mod.State(node['argument'], state.scope);
     } else {
         this.throwException(state.value);
     }
 };
 
-S8Interpreter.prototype['stepTryStatement'] = function(stack, state, node) {
+Mod.prototype['stepTryStatement'] = function(stack, state, node) {
     if (!state.doneBlock_) {
         state.doneBlock_ = true;
-        return new S8Interpreter.State(node['block'], state.scope);
+        return new Mod.State(node['block'], state.scope);
     }
-    if (state.cv && state.cv.type === S8Interpreter.Completion.THROW &&
+    if (state.cv && state.cv.type === Mod.Completion.THROW &&
         !state.doneHandler_ && node['handler']) {
         state.doneHandler_ = true;
-        const nextState = new S8Interpreter.State(node['handler'], state.scope);
+        const nextState = new Mod.State(node['handler'], state.scope);
         nextState.throwValue = state.cv.value;
         state.cv = undefined;  // This error has been handled, don't rethrow.
         return nextState;
     }
     if (!state.doneFinalizer_ && node['finalizer']) {
         state.doneFinalizer_ = true;
-        return new S8Interpreter.State(node['finalizer'], state.scope);
+        return new Mod.State(node['finalizer'], state.scope);
     }
     stack.pop();
     if (state.cv) {
@@ -3933,10 +3933,10 @@ S8Interpreter.prototype['stepTryStatement'] = function(stack, state, node) {
     }
 };
 
-S8Interpreter.prototype['stepUnaryExpression'] = function(stack, state, node) {
+Mod.prototype['stepUnaryExpression'] = function(stack, state, node) {
     if (!state.done_) {
         state.done_ = true;
-        const nextState = new S8Interpreter.State(node['argument'], state.scope);
+        const nextState = new Mod.State(node['argument'], state.scope);
         nextState.components = node['operator'] === 'delete';
         return nextState;
     }
@@ -3956,7 +3956,7 @@ S8Interpreter.prototype['stepUnaryExpression'] = function(stack, state, node) {
         // If so, skip the delete and return true.
         if (Array.isArray(value)) {
             let obj = value[0];
-            if (obj === S8Interpreter.SCOPE_REFERENCE) {
+            if (obj === Mod.SCOPE_REFERENCE) {
                 // `delete foo;` is the same as `delete window.foo;`.
                 obj = state.scope;
             }
@@ -3983,10 +3983,10 @@ S8Interpreter.prototype['stepUnaryExpression'] = function(stack, state, node) {
     stack[stack.length - 1].value = value;
 };
 
-S8Interpreter.prototype['stepUpdateExpression'] = function(stack, state, node) {
+Mod.prototype['stepUpdateExpression'] = function(stack, state, node) {
     if (!state.doneLeft_) {
         state.doneLeft_ = true;
-        const nextState = new S8Interpreter.State(node['argument'], state.scope);
+        const nextState = new Mod.State(node['argument'], state.scope);
         nextState.components = true;
         return nextState;
     }
@@ -4002,7 +4002,7 @@ S8Interpreter.prototype['stepUpdateExpression'] = function(stack, state, node) {
         if (this.getterStep_) {
             // Call the getter function.
             state.doneGetter_ = true;
-            const func = /** @type {!S8Interpreter.Object} */ (leftValue);
+            const func = /** @type {!Mod.Object} */ (leftValue);
             return this.createGetter_(func, state.leftSide_);
         }
     }
@@ -4035,7 +4035,7 @@ S8Interpreter.prototype['stepUpdateExpression'] = function(stack, state, node) {
     stack[stack.length - 1].value = returnValue;
 };
 
-S8Interpreter.prototype['stepVariableDeclaration'] = function(stack, state, node) {
+Mod.prototype['stepVariableDeclaration'] = function(stack, state, node) {
     const declarations = node['declarations'];
     let n = state.n_ || 0;
     let declarationNode = declarations[n];
@@ -4053,28 +4053,28 @@ S8Interpreter.prototype['stepVariableDeclaration'] = function(stack, state, node
         if (declarationNode['init']) {
             state.n_ = n;
             state.init_ = true;
-            return new S8Interpreter.State(declarationNode['init'], state.scope);
+            return new Mod.State(declarationNode['init'], state.scope);
         }
         declarationNode = declarations[++n];
     }
     stack.pop();
 };
 
-S8Interpreter.prototype['stepWithStatement'] = function(stack, state, node) {
+Mod.prototype['stepWithStatement'] = function(stack, state, node) {
     if (!state.doneObject_) {
         state.doneObject_ = true;
-        return new S8Interpreter.State(node['object'], state.scope);
+        return new Mod.State(node['object'], state.scope);
     } else if (!state.doneBody_) {
         state.doneBody_ = true;
         const scope = this.createSpecialScope(state.scope, state.value);
-        return new S8Interpreter.State(node['body'], scope);
+        return new Mod.State(node['body'], scope);
     } else {
         stack.pop();
     }
 };
 
-S8Interpreter.prototype['stepWhileStatement'] =
-    S8Interpreter.prototype['stepDoWhileStatement'];
+Mod.prototype['stepWhileStatement'] =
+    Mod.prototype['stepDoWhileStatement'];
 
 // Preserve top-level API functions from being pruned/renamed by JS compilers.
 // Add others as needed.
@@ -4082,19 +4082,19 @@ S8Interpreter.prototype['stepWhileStatement'] =
 
 // this['Interpreter'] = Interpreter;
 
-S8Interpreter.prototype['step'] = S8Interpreter.prototype.step;
-S8Interpreter.prototype['run'] = S8Interpreter.prototype.run;
-S8Interpreter.prototype['appendCode'] = S8Interpreter.prototype.appendCode;
-S8Interpreter.prototype['createObject'] = S8Interpreter.prototype.createObject;
-S8Interpreter.prototype['createObjectProto'] =
-    S8Interpreter.prototype.createObjectProto;
-S8Interpreter.prototype['createAsyncFunction'] =
-    S8Interpreter.prototype.createAsyncFunction;
-S8Interpreter.prototype['createNativeFunction'] =
-    S8Interpreter.prototype.createNativeFunction;
-S8Interpreter.prototype['getProperty'] = S8Interpreter.prototype.getProperty;
-S8Interpreter.prototype['setProperty'] = S8Interpreter.prototype.setProperty;
-S8Interpreter.prototype['nativeToPseudo'] = S8Interpreter.prototype.nativeToPseudo;
-S8Interpreter.prototype['pseudoToNative'] = S8Interpreter.prototype.pseudoToNative;
+Mod.prototype['step'] = Mod.prototype.step;
+Mod.prototype['run'] = Mod.prototype.run;
+Mod.prototype['appendCode'] = Mod.prototype.appendCode;
+Mod.prototype['createObject'] = Mod.prototype.createObject;
+Mod.prototype['createObjectProto'] =
+    Mod.prototype.createObjectProto;
+Mod.prototype['createAsyncFunction'] =
+    Mod.prototype.createAsyncFunction;
+Mod.prototype['createNativeFunction'] =
+    Mod.prototype.createNativeFunction;
+Mod.prototype['getProperty'] = Mod.prototype.getProperty;
+Mod.prototype['setProperty'] = Mod.prototype.setProperty;
+Mod.prototype['nativeToPseudo'] = Mod.prototype.nativeToPseudo;
+Mod.prototype['pseudoToNative'] = Mod.prototype.pseudoToNative;
 
-export { S8Interpreter };
+export { Mod };
