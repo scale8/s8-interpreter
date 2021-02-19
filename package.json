@@ -1,6 +1,6 @@
 {
     "name": "@scale8/s8-interpreter",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "Javascript Interpreter",
     "keywords": [
         "s8",
@@ -12,8 +12,7 @@
     "publishConfig": {
         "registry": "https://npm.pkg.github.com/"
     },
-    "scripts": {
-    },
+    "scripts": {},
     "files": [
         "dist/**/*"
     ],
