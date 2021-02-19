@@ -17,3 +17,5 @@ declare module '*S8Interpreter' {
         run(): void;
     }
 }
+
+declare module '*acorn';
