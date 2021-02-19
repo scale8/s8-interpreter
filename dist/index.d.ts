@@ -16,6 +16,6 @@ declare namespace S8Interpreter {
          * @return {boolean} True if a execution is asynchronously blocked,
          *     false if no more instructions.
          */
-        run(): void;
+        run(): boolean;
     }
 }
