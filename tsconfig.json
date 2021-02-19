@@ -4,11 +4,10 @@
     "module": "commonjs",
     "declaration": true,
     "outDir": "./dist",
-    "typeRoots": ["./node_modules/@types", "./types"],
     "strict": true,
     "resolveJsonModule": true,
     "esModuleInterop": true
   },
-  "include": ["src","types"],
+  "include": [],
   "exclude": ["node_modules", "tests"]
 }

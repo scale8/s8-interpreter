@@ -18,4 +18,4 @@ declare module '*S8Interpreter' {
     }
 }
 
-declare module '*acorn';
+declare module '*S8Acorn';

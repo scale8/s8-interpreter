@@ -1863,4 +1863,4 @@ function parseIdent(liberal) {
     return finishNode(node, 'Identifier');
 }
 
-export { exports as s8Acorn };
+export { exports as S8AcornJS };
