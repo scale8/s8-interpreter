@@ -8,6 +8,6 @@
     "resolveJsonModule": true,
     "esModuleInterop": true
   },
-  "include": [],
+  "include": ["dist"],
   "exclude": ["node_modules", "tests"]
 }

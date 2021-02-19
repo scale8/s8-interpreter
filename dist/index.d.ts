@@ -1,4 +1,4 @@
-declare module '*S8Interpreter' {
+declare module 'S8Interpreter' {
     export class S8Interpreter {
         /**
          * Create a new interpreter.
@@ -18,4 +18,4 @@ declare module '*S8Interpreter' {
     }
 }
 
-declare module '*S8Acorn';
+declare module 'S8Acorn';
