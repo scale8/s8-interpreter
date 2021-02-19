@@ -1,8 +1,8 @@
 {
     "env": {
         "browser": true,
-        "es6": false,
-        "node": false
+        "es6": true,
+        "node": true
     },
     "plugins": [
         "prettier",
@@ -11,6 +11,9 @@
     "extends": [
         "plugin:prettier/recommended"
     ],
+    "parserOptions": {
+        "sourceType": "module"
+    },
     "rules": {
         "unused-imports/no-unused-imports": 2,
         "unused-imports/no-unused-vars": 1
