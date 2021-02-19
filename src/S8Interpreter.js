@@ -4097,4 +4097,4 @@ S8Interpreter.prototype['setProperty'] = S8Interpreter.prototype.setProperty;
 S8Interpreter.prototype['nativeToPseudo'] = S8Interpreter.prototype.nativeToPseudo;
 S8Interpreter.prototype['pseudoToNative'] = S8Interpreter.prototype.pseudoToNative;
 
-export default S8Interpreter;
+export { S8Interpreter };

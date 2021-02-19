@@ -1,2 +1,7 @@
-export { S8Interpreter } from './interpreter/S8Interpreter';
-export { S8Parser } from './interpreter/S8Parser';
+import { S8Interpreter } from '*S8Interpreter';
+
+const i: S8Interpreter = new S8Interpreter('1+1', (interpreter, scope) => {
+    console.log(interpreter, scope);
+});
+
+i.run();

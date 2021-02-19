@@ -7,8 +7,8 @@
     "scale8",
     "interpreter"
   ],
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "src/S8Interpreter.js",
+  "types": "types/S8Interpreter.d.ts",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"
   },
@@ -17,7 +17,7 @@
     "lint": "eslint . --ext .ts",
     "lint:fix": "yarn lint --fix",
     "build": "tsc",
-    "prepare": "yarn build",
+    "prepare": "yarn build"
   },
   "files": [
     "dist/**/*"
