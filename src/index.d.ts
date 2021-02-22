@@ -66,6 +66,11 @@ declare namespace S8Interpreter {
         run(): boolean;
 
         /**
+         * Execute the interpreter to program to completion.
+         */
+        runAll(): boolean;
+
+        /**
          * Execute one step of the interpreter.
          * @return {boolean} True if a step was executed, false if no more instructions.
          */
