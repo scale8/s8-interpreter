@@ -24,6 +24,7 @@ var Interpreter = function (code, opt_initFunc) {
     this.uid = Math.random().toString(16).substr(2);
     this.unpauseEvent =  window.document.createEvent('Event');
     this.unpauseEvent.initEvent(this.uid, true, true);
+    this.halted_ = false;
     if (typeof code === 'string') {
         code = acorn.parse(code, Interpreter.PARSE_OPTIONS);
     }
@@ -320,6 +321,7 @@ Interpreter.prototype.step = function () {
         var node = state.node,
             type = node['type'];
         if (type === 'Program' && state.done) {
+            console.log("EXEC COMPLETE -> USE EVENT TO DO THIS!");
             return false;
         } else if (this.paused_) {
             return true;
@@ -354,8 +356,13 @@ Interpreter.prototype.step = function () {
  * @return {boolean} True if a execution is asynchronously blocked,
  *     false if no more instructions.
  */
+
+Interpreter.prototype.halt = function () {
+    this.halted_ = true;
+};
+
 Interpreter.prototype.run = function () {
-    while (!this.paused_ && this.step()) {}
+    while (!this.paused_ && !this.halted_ && this.step()) {}
     return this.paused_;
 };
 
