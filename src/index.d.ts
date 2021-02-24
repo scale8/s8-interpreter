@@ -68,7 +68,7 @@ declare namespace S8Interpreter {
         /**
          * Execute the interpreter to program to completion.
          */
-        runAll(): boolean;
+        runAll(onError: (e: any) => void, onComplete: () => void): boolean;
 
         /**
          * Execute one step of the interpreter.
