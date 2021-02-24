@@ -22,9 +22,10 @@ import { acorn } from './acorn';
  */
 var Interpreter = function (code, opt_initFunc) {
     this.uid = Math.random().toString(16).substr(2);
-    this.unpauseEvent =  window.document.createEvent('Event');
-    this.unpauseEvent.initEvent(this.uid, true, true);
     this.halted_ = false;
+    this.completeFunc_ = function(){};
+    this.errorFunc_ = function(){};
+    this.unpauseFunc_ = function(){};
     if (typeof code === 'string') {
         code = acorn.parse(code, Interpreter.PARSE_OPTIONS);
     }
@@ -321,7 +322,7 @@ Interpreter.prototype.step = function () {
         var node = state.node,
             type = node['type'];
         if (type === 'Program' && state.done) {
-            console.log("EXEC COMPLETE -> USE EVENT TO DO THIS!");
+            this.completeFunc_();
             return false;
         } else if (this.paused_) {
             return true;
@@ -366,12 +367,22 @@ Interpreter.prototype.run = function () {
     return this.paused_;
 };
 
-Interpreter.prototype.runAll = function () {
+Interpreter.prototype.runAll = function (onError, onComplete) {
     var thisInterpreter = this;
-    window.addEventListener(thisInterpreter.uid, function (){
+    thisInterpreter.errorFunc_ = onError;
+    thisInterpreter.completeFunc_ = onComplete;
+    thisInterpreter.unpauseFunc_ = function(){
+        try {
+            thisInterpreter.run();
+        } catch (e) {
+            thisInterpreter.errorFunc_(e);
+        }
+    }
+    try {
         thisInterpreter.run();
-    }, false);
-    thisInterpreter.run();
+    } catch (e) {
+        thisInterpreter.errorFunc_(e);
+    }
 };
 
 /**
@@ -3651,7 +3662,7 @@ Interpreter.prototype['stepCallExpression'] = function (stack, state, node) {
             var callback = function (value) {
                 state.value = value;
                 thisInterpreter.paused_ = false;
-                window.dispatchEvent(thisInterpreter.unpauseEvent);
+                thisInterpreter.unpauseFunc_();
             };
             // Force the argument lengths to match, then append the callback.
             var argLength = func.asyncFunc.length - 1;
