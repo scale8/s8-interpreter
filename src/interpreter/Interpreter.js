@@ -392,6 +392,24 @@ Interpreter.prototype.run = function () {
     return this.paused_;
 };
 
+Interpreter.prototype.runAll = function (onError, onComplete) {
+    var thisInterpreter = this;
+    thisInterpreter.errorFunc_ = onError;
+    thisInterpreter.completeFunc_ = onComplete;
+    thisInterpreter.unpauseFunc_ = function(){
+        try {
+            thisInterpreter.run();
+        } catch (e) {
+            thisInterpreter.errorFunc_(e);
+        }
+    }
+    try {
+        thisInterpreter.run();
+    } catch (e) {
+        thisInterpreter.errorFunc_(e);
+    }
+};
+
 /**
  * Queue a pseudo function for execution on next step
  * @param {Interpreter.Object} func Interpreted function
