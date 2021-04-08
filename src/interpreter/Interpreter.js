@@ -4890,3 +4890,5 @@ Interpreter.prototype['pseudoToNative'] = Interpreter.prototype.pseudoToNative;
 Interpreter.prototype['callFunction'] = Interpreter.prototype.callFunction;
 Interpreter.prototype['queueFunction'] = Interpreter.prototype.queueFunction;
 Interpreter.prototype['createThrowable'] = Interpreter.prototype.createThrowable;
+
+export { Interpreter };
