@@ -649,12 +649,28 @@ Interpreter.prototype.initFunction = function (globalObject) {
     );
     this.FUNCTION_PROTO.class = 'Function';
 
+    var boxThis = function (value) {
+        // In non-strict mode `this` must be an object.
+        if (!(value instanceof Interpreter.Object) && !thisInterpreter.getScope().strict) {
+            if (value === undefined || value === null) {
+                // `Undefined` and `null` are changed to the global object.
+                value = thisInterpreter.globalObject;
+            } else {
+                // Primitives must be boxed in non-strict mode.
+                var box = thisInterpreter.createObjectProto(thisInterpreter.getPrototype(value));
+                box.data = value;
+                value = box;
+            }
+        }
+        return value;
+    };
+
     wrapper = function apply(thisArg, args) {
         var state = thisInterpreter.stateStack[thisInterpreter.stateStack.length - 1];
         // Rewrite the current CallExpression state to apply a different function.
         state.func_ = this;
         // Assign the `this` object.
-        state.funcThis_ = thisArg;
+        state.funcThis_ = boxThis(thisArg);
         // Bind any provided arguments.
         state.arguments_ = [];
         if (args !== null && args !== undefined) {
@@ -676,7 +692,7 @@ Interpreter.prototype.initFunction = function (globalObject) {
         // Rewrite the current CallExpression state to call a different function.
         state.func_ = this;
         // Assign the `this` object.
-        state.funcThis_ = thisArg;
+        state.funcThis_ = boxThis(thisArg);
         // Bind any provided arguments.
         state.arguments_ = [];
         for (var i = 1; i < arguments.length; i++) {
