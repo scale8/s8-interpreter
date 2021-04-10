@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>S8 Interpreter Demo</title>
+    <script type="module" src="demo.js"></script>
+</head>
+<body>
+
+<h1>S8 Interpreter Demo</h1>
+
+<p>Enter JavaScript code below, then click <em>Run</em>.</p>
+
+<p><label for="code">Code</label></p>
+<textarea id="code" spellcheck="false" rows="20" cols="100">
+callF(function(a, b){
+    log(a);
+    log(b);
+});
+
+callA(function(a){
+    log(a);
+}, function(e) {
+    log(e);
+});
+
+setTimeout(
+   function(){
+      log("later");
+   },
+   1000
+);
+</textarea>
+
+<p><button class="run-button">Run</button></p>
+
+</body>
+</html>

@@ -1,10 +1,4 @@
 /**
- * @license
- * Copyright 2013 Google LLC
- * SPDX-License-Identifier: Apache-2.0
- */
-
-/**
  * @fileoverview Interpreting JavaScript in JavaScript.
  * @author fraser@google.com (Neil Fraser)
  */

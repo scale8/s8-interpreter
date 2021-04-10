@@ -38,6 +38,11 @@ declare namespace S8Interpreter {
         RETURN: 3;
         THROW: 4;
     };
+    type InterpreterCallback = {
+        then: any;
+        catch: any;
+    }
+
     class Interpreter {
         /**
          * Create a new interpreter.
@@ -210,5 +215,23 @@ declare namespace S8Interpreter {
             name: InterpreterValue,
             wrapper: any,
         ): void;
+
+        /**
+         * Queue a pseudo function for execution on next step
+         * @param func Interpreted function
+         * @param funcThis Interpreted Object to use as "this"
+         * @param var_args Interpreted Objects to pass as arguments
+         * @return {InterpreterCallback} Object for running pseudo function callback
+         */
+        callFunction(func: any, funcThis?: any, ...var_args: any[]): InterpreterCallback;
+
+        /**
+         * Queue a pseudo function for execution on next step
+         * @param func Interpreted function
+         * @param funcThis Interpreted Object to use as "this"
+         * @param var_args Interpreted Objects to pass as arguments
+         * @return {InterpreterCallback} Object for running pseudo function callback
+         */
+        queueFunction(func: any, funcThis?: any, ...var_args: any[]):InterpreterCallback;
     }
 }
