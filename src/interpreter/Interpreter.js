@@ -17,7 +17,9 @@ import { acorn } from './acorn';
 var Interpreter = function (code, opt_initFunc) {
     this.uid = Math.random().toString(16).substr(2);
     this.halted_ = false;
+    this.hasCompleteFuncRun_ = false;
     this.completeFunc_ = function(){};
+    this.hasErrorFuncRun_ = false;
     this.errorFunc_ = function(){};
     this.unpauseFunc_ = function(){};
     if (typeof code === 'string') {
@@ -388,8 +390,18 @@ Interpreter.prototype.run = function () {
 
 Interpreter.prototype.runAll = function (onError, onComplete) {
     var thisInterpreter = this;
-    thisInterpreter.errorFunc_ = onError;
-    thisInterpreter.completeFunc_ = onComplete;
+    thisInterpreter.errorFunc_ = () => {
+        if(!thisInterpreter.hasErrorFuncRun_){
+            thisInterpreter.hasErrorFuncRun_ = true;
+            onError();
+        }
+    };
+    thisInterpreter.completeFunc_ = () => {
+        if(!thisInterpreter.hasCompleteFuncRun_){
+            thisInterpreter.hasCompleteFuncRun_ = true;
+            onComplete();
+        }
+    };
     thisInterpreter.unpauseFunc_ = function(){
         try {
             thisInterpreter.run();
