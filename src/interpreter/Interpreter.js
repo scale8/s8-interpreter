@@ -390,10 +390,10 @@ Interpreter.prototype.run = function () {
 
 Interpreter.prototype.runAll = function (onError, onComplete) {
     var thisInterpreter = this;
-    thisInterpreter.errorFunc_ = () => {
+    thisInterpreter.errorFunc_ = (e) => {
         if(!thisInterpreter.hasErrorFuncRun_){
             thisInterpreter.hasErrorFuncRun_ = true;
-            onError();
+            onError(e);
         }
     };
     thisInterpreter.completeFunc_ = () => {
