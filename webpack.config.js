@@ -26,4 +26,7 @@ module.exports = {
             patterns: [{ from: 'src/index.d.ts' }],
         }),
     ],
+    resolve: {
+        fallback: { vm: false },
+    },
 };

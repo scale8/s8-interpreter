@@ -11,6 +11,7 @@ module.exports = {
     },
     resolve: {
         extensions: ['.ts', '.tsx', '.js', '.json'],
+        fallback: { vm: false },
     },
     devtool: 'inline-source-map',
     watch: true,
