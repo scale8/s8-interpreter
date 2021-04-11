@@ -32,7 +32,7 @@ const runCode = (code: string) => {
                 globalObject,
                 'callF',
                 interpreter.createNativeFunction((success: any, failure: any) => {
-                    return interpreter.callFunction(success,undefined,'sdasd', 'dsdsd');
+                    return interpreter.callFunction(success, undefined, 'sdasd', 'dsdsd');
                 }),
             );
             interpreter.setProperty(
@@ -73,7 +73,7 @@ const runCode = (code: string) => {
 };
 
 // Run Button
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
     document.addEventListener('click', function (event: MouseEvent) {
         // If the clicked element doesn't have the right selector, bail
         if (!(event.target as HTMLElement).matches('.run-button')) return;
