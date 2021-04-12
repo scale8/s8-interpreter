@@ -58,6 +58,11 @@ declare namespace S8Interpreter {
         );
 
         /**
+         * Value obtained from the code as expression.
+         */
+        value: any;
+
+        /**
          * Add more code to the interpreter.
          * @param {string|!InterpreterObject} code Raw JavaScript text or AST.
          */
