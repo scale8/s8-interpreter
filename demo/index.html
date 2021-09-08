@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>S8 Interpreter Demo</title>
+    <script type="module" src="demo.js"></script>
+    <style>
+        .flex{
+            display: flex;
+        }
+        .flex > div {
+            flex: 1;
+            padding: 8px;
+        }
+        #code, #log {
+            resize: none;
+            width: 100%;
+        }
+        textarea:focus {
+            outline-width: 0;
+        }
+    </style>
+</head>
+<body>
+
+<h1>S8 Interpreter Demo</h1>
+
+<p>Enter JavaScript code below, then click <em>Run</em>.</p>
+
+<p><label for="preset">Preset</label></p>
+<select id="preset">
+    <option value="">No Preset</option>
+</select>
+
+
+<div class="flex">
+    <div>
+        <p><label for="code">Code</label></p>
+        <textarea id="code" spellcheck="false" rows="20"></textarea>
+    </div>
+    <div>
+        <p><label for="log">Log</label></p>
+        <textarea id="log" spellcheck="false" rows="20" readonly></textarea>
+    </div>
+</div>
+
+
+
+<p><button class="run-button">Run</button></p>
+
+</body>
+</html>

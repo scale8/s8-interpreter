@@ -1,0 +1,58 @@
+{
+    "name": "@scale8/s8-interpreter",
+    "version": "0.2.6",
+    "description": "Javascript Interpreter",
+    "keywords": [
+        "s8",
+        "scale8",
+        "interpreter"
+    ],
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com/"
+    },
+    "scripts": {
+        "clean": "rimraf coverage dist tmp logs",
+        "lint": "eslint . --ext .ts",
+        "lint:fix": "yarn lint --fix",
+        "build": "webpack",
+        "test": "jest",
+        "dev": "webpack --config=webpack.demo.config.js & lite-server --baseDir=\"demo\"",
+        "prepare": "yarn build"
+    },
+    "files": [
+        "dist/**/*"
+    ],
+    "repository": "git@github.com:scale8/s8-interpreter.git",
+    "license":  "Apache-2.0",
+    "dependencies": {
+        "@types/node": "^14.14.28",
+        "babel-loader": "^8.2.2",
+        "copy-webpack-plugin": "^7.0.0",
+        "eslint": "^7.20.0",
+        "eslint-config-prettier": "^7.2.0",
+        "eslint-plugin-jest": "^24.1.5",
+        "eslint-plugin-prettier": "^3.3.1",
+        "eslint-plugin-unused-imports": "^1.1.0",
+        "jest": "^26.6.3",
+        "prettier": "^2.2.1",
+        "rimraf": "^3.0.2",
+        "ts-node": "^9.1.1",
+        "typescript": "^4.2.4",
+        "webpack": "^5.23.0",
+        "webpack-cli": "^4.5.0"
+    },
+    "devDependencies": {
+        "@babel/cli": "^7.10.1",
+        "@babel/core": "^7.10.2",
+        "@babel/plugin-proposal-class-properties": "^7.10.1",
+        "@babel/plugin-transform-modules-commonjs": "^7.13.8",
+        "@babel/preset-env": "^7.13.15",
+        "@babel/preset-react": "^7.10.4",
+        "@babel/preset-typescript": "^7.10.1",
+        "@types/jest": "^26.0.22",
+        "lite-server": "^2.6.1",
+        "ts-jest": "^26.5.4"
+    }
+}
